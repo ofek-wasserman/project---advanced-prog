@@ -1,0 +1,463 @@
+ תכנות מתקדם | תרגיל בית מספר3
+ | תכנון פרויקט 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ תכנות מתקדם 
+ תרגיל בית מספר3
+ 
+ תכנון פרויקט 
+ 
+:מגישים 
+ עדן ירקוני315819565
+ 
+ אופק וסרמן203824420
+ 
+ עידו אטיאס206858433
+ 
+ דניאל שילה211396015
+ 
+ אריאל דריימן322821505
+ 
+ 
+  
+
+ תכנות מתקדם | תרגיל בית מספר3
+ | תכנון פרויקט 
+ 
+ שאלה1
+ - עיצוב מוצר 
+FRONTEND
+ 
+ וחווית המשתמש 
+המוצר יפותח כ אפליקציית מובייל
+ה
+מתאימה ל מכשירי
+אנדרואיד ו-
+IOS
+ , בעלת
+עיצוב 
+,נקי וצעיר 
+ בהשראת אפליקציות קיימות
+של תחבורה ציבורית שיתופית:
+ 
+•
+ 
+ העמוד הראשון שרואים יהיה של מפה המציגה על גביה נקודות שמציינות איפה יש תחנות
+ .עגינה וכמה כלים רכב זמינים נמצאים בכל אחת מהן 
+•
+ 
+ בחלק התחתון של המסך יהיה תפריט קצר עם כפתורים- 
+ מפה, סרוקQR, פרופיל 
+ .משתמש (או התחבר אם אין פרופיל מחובר) והגדרות 
+•
+ בפתיחה הראשונה של האפליקציה יהיה הסבר קצר על ה-
+UI
+ 
+ ומה כל כפתור עושה. יהיה
+ .אפשר לחזור להסבר דרך ההגדרות 
+•
+ 
+ כשלוחצים על תחנה אפשר לראות יותר פרטים על כלי הרכב שנמצאים בה כמו מצב
+ סוללה ולוחית רישוי. בנוסף אפשר לדווח על כל כלי רכב בתחנה ככלי רכב תקול. כל תחנה
+ תהיה צבועה בצבע אחר 
+.המסמן את כמות הכלים הזמינים בה באופן יחסי 
+•
+ כשלוחצים על כלי רכב בתחנה המצלמה של הטלפון תיפתח לסריקת ה-
+QR
+ . לאחר
+ הסריקה האפליקציה תציגV
+ 
+ אוX
+ 
+ .אם פתיחת הנעילה על כלי הרכב הושלמה או לא 
+•
+ 
+ .אחרי פתיחת הנעילה האפליקציה תציג סטופר שסופר למעלה את זמן הנסיעה עד כה
+.בנוסף, יהיה כפתור לדיווח על תקלה וכפתור לסיום נסיעה 
+•
+ 
+.בנוסף, עמוד התחברות בו ניתן ליצור משתמש, להתחבר לחשבון או לערוך אותו 
+ 
+ 
+ 
+ 
+
+ תכנות מתקדם | תרגיל בית מספר3
+ | תכנון פרויקט 
+ 
+ תכנוןBACKEND
+ :
+ 
+1
+.
+ 
+ זמני תגובה: המערכת תתבסס עלAsync REST API
+ 
+ כדי להתמודד עם כל הבקשות
+:שיגיעו אליה במקביל ללא חסימה 
+○
+ 
+ זמן פתיחת נעילה: נשא
+ף לזמן תגובה של פחות מ-
+2
+ שניות מרגע סריקת ה-
+QR
+ 
+ ועד
+ .לפתיחה הפיזית של הנעילה 
+○
+ 
+ זמן עדכון מפה: כל10
+ 
+ שניות המפה צריכה לעדכן את מצב הכלים שנמצאים בכל
+ .תחנה: אם נלקחו מהתחנה, אם צריכים לעבור טיפול, או אם בעגינה 
+2
+.
+ 
+ שירותי צד ג': נשתמש בשירותי צד ג' להצגת מפות, תשלומים, אירוח שרתים ובסיסי
+ נתונים ושירותOTP
+ :
+ 
+ 
+3
+.
+ 
+ משתמשים יוכלו
+להירש
+ם 
+ לאפליקציה עם אימייל וסיסמה או בהתחברות מהירה דרך
+ חשבון גוגל אוAppleID. בהתחברות יבוצע אימות דו-
+ שלבי באמצעותSMS
+ 
+ .או ווצאפ 
+ :באפליקציה יהיו שלושה סוגי משתמשים 
+○
+ 
+ משתמש רגיל: הרשאות לשכור כלים, לראות היסטוריית רכיבות, לשלם על רכיבה
+ .ולדווח על כלי רכב כתקול 
+○
+ 
+ משתמש תפעולי: כל ההרשאות של משתמש רגיל וגם הרשאות לפתיחת נעילה ללא
+ .השכרה ולשינוי סטטוס של כלי רכב מתקול לזמין 
+○
+ 
+ ,משתמש ניהולי: כל ההרשאות של המשתמשים הקודמים וגם גישה לדוחות כספיים
+סטטיסטיקות שימוש ותקלות, עריכת מידע ו.חסימת משתמשים 
+ 
+ 
+ תפקיד 
+ שירות 
+ עלות חודשית משוערת 
+שירותי מפה 
+Google Maps API
+$100–$800
+ 
+שירותי תשלום 
+Stripe / PayPal
+ 
+~$1,500–$6,000
+ 
+אימות משתמשים 
+Twilio
+ 
+$80–$1,000
+ 
+ שרתים ובסיסי נתוניםAWS/Azure
+ 
+$100–$1,500
+ 
+
+ תכנות מתקדם | תרגיל בית מספר3
+ | תכנון פרויקט 
+ 
+ :שלבי הפיתוח 
+ הצוות יכלול2
+ 
+ מפתחיFrontend
+ 
+ ,למובייל4
+ 
+ מפתחיBackend
+ ו-
+2
+ 
+ אנשיQA
+ 
+ .לבדיקות בסוף 
+1
+.
+ 
+ שלב ראשון: פיתוח גרסה ראשונית (חודשים1-2
+)
+ 
+1.1
+.
+ 
+ הקמת בסיס נתונים ושרת בסיסי 
+1.2
+.
+ 
+ הקמת שרתAPI
+ 
+1.3
+.
+ 
+ הקמת העמודים הראשונים של האפליקציה שכוללים מפה וסריקתQR
+ 
+1.4
+.
+ 
+:מימוש לוגיקות 
+1.4.1
+.
+ 
+ ניהול רכיבות פעילות 
+1.4.2
+.
+ חישוב מרחקים בין כלים לתחנות 
+1.4.3
+.
+ ניהול קיבולת תחנות 
+1.4.4
+.
+ 
+ ניהול מערכת משתמשים 
+2
+.
+ 
+ שלב שני: אינטגרציות וחיבור למערכת תשלומים (חודשים3-4
+ )
+ 
+2.1
+.
+ חיבור בין כלים לתחנות 
+2.2
+.
+ יצירת תחנת עגינה לכלים מקולקלים 
+2.3
+.
+ 
+ חיבור בין דיווח משתמשים לכלי רכב 
+3
+.
+ 
+ שלב שלישי: בדיקות ותיקונים (חודשים5-6
+)
+ 
+3.1
+.
+ 
+ בדיקות מקרי קצה אצלQA
+ 
+ ותיקון באגים 
+3.2
+.
+ הצבה ניסיונית של תחנות פיזיות בשטח ובדיקות עליהם 
+3.3
+.
+ 
+ אופטימיזציה של השרת 
+4
+.
+ 
+ שלב רביעי: יציאה לשוק (חודשים7-8
+ )
+ 
+4.1
+.
+ התקנה רחבה של תחנות עגינה 
+4.2
+.
+ העסקת טכנאים 
+4.3
+.
+ שיווק וקידום האפליקציה 
+ 
+ 
+ 
+
+ תכנות מתקדם | תרגיל בית מספר3
+ | תכנון פרויקט 
+ 
+:כדי למכור ולשווק את המוצר, נבצע כמה צעדים 
+●
+ 
+ פגישות עם עיריות באזור מטרופולין ת"א כדי לדאוג לשיתוף פעולה בהצבת התחנות
+ במספר רחב של יעדים מבוקשים בעיר, תוך חשיבה על ההתפתחות העירונית ועל
+.נהלים ותקנות בטיחות 
+●
+ 
+ ,בשחרור האפליקציה לשוק, נקנה פרסומות בקרבה לתחנות רכבת ותחנות אוטובוסים
+ כדי להגיע לקהל שמשתמש בתחבורה ציבורית במטרופולין והמוצר יכול לעזור לו
+להתני
+י .דות בתוך העיר 
+●
+ 
+ נציע למשתמשים חדשיםX
+ 
+ .רכיבות ראשונות בחינם כדי לעודד שימוש בשירות 
+●
+ 
+.נציע הנחות לחיילים ולסטודנטים 
+●
+ 
+ נדגיש שבמקרה של תקלה מקבלים זיכוי מלא על הנסיעה כדי להראות הוגנות וליצור
+.אמינות מול הלקוחות 
+ 
+ :כשלים וסיכונים אפשריים 
+●
+ 
+.ונדליזם וגניבות: גניבות של כלי רכב ושבירת מנעולים של תחנות עגינה 
+●
+ 
+ עומס בתחנות פופולריות: התחנות מוגבלות בקיבולת העגינה שלהן. קיים סיכון
+ שמשתמש לא ימצא כלי רכב שמיש בתחנה אליה הגיע או שבסיום נסיעה, תחנת
+ העגינה שירצה לעגון בה תהיה מלאה. בשני המקרים המשתמש יאלץ לנסוע לתחנה
+ רחוקה יותר, מה שיפגע
+בחוויי
+ת 
+.המשתמש וביעילות השירות 
+●
+ 
+ איבוד מידע מנפילת השרת: למרות השימוש בשירותי ענן לתפעול השרת, קיים הסיכון
+ שהשרת ייפול והמערכת תאבד תקשורת. במקרה של הפעלה מחדש המערכת נדרש
+ לשמור על המצב של הרכיבות הפעילות ועל מיקומי הכלים. אם המערכת תיכשל
+בכתיבה של הנתונים האלה, מידע על חיובים ומיקומי רכב .ים ילך לאיבוד 
+●
+ 
+ הצטברות כלים תקולים: אם קצב הטיפול בכלים תקולים יהיה איטי מידי, ייתכן מצב בו
+ יותר מידי כלים יהפכו ללא שמישים ויחסמו תחנות עגינה. זה עלול לגרום לתדמית של
+ .חוסר זמינות ופגיעה באמינות המוצר 
+●
+ 
+ ניצול לרעה של האפשרות לדיווח תקלה: קיים סיכון שמשתמשים ידווחו שכלי רכב
+ תקולים כדי לא לשלם על הנסיעה. ניצול כזה יגרום לעומס על הטכנאים ויפגע כלכלית
+.בהכנסות מהשירות 
+●
+ 
+ רגולציה: שינוי בחוקי עזר עירוניים יכול לגרום לשיבוש או לעצירת השירות. חשוב להיות
+ .בדוברות עם העירייה ולעבוד איתם בשיתוף פעולה 
+
+<<abstract>> Vehicle
+vehicle_id: str
+type: VehicleType
+status: VehicleStatus
+rides_since_last_treated: int
+last_treated_date: date
+location: VehicleLocation
+station_id: int | None 
+active_ride_id: int | None
+is_eligible() -> bool
+can_initiate_treatment() -> bool
+mark_degraded() -> None
+apply_treatment(today: date) -> None
+add_ride_count() -> None
+dock_to_station(station_id: int) -> None
+checkout_to_ride(ride_id: int) -> None
+move_to_repo() -> None
+ElectricVehicle(Vehicle)
+charge_pct: int
+is_charged_enough() -> bool
+consume_charge(distance: float) -> None
+recharge() -> None
+Scooter(ElectricVehicle)
+Station(VehicleContainer)
+lat: float
+lon: float
+max_capacity: int
+has_free_slot() -> bool
+Bicycle(Vehicle)
+<<abstract>> VehicleContainer
+container_id: int
+_vehicle_ids: set[str]
+name: str
+add_vehicle(vehicle_id: str) -> None
+remove_vehicle(vehicle_id: str) -> None
+contains(vehicle_id: str) -> bool
+list_vehicle_ids() -> list[str]
+count() -> int
+User
+user_id: int
+payment_token: str
+DegradedRepo(VehicleContainer)
+ActiveRidesRegistry
+rides_by_id: dict[int, Ride]
+ride_id_by_user: dict[int, int]
+ride_id_by_vehicle: dict[str, int]
+add(ride: Ride) -> None
+remove(ride_id: int) -> Ride
+get(ride_id: int) -> Ride
+has_active_ride_for_user(user_id: int) -> bool
+get_active_ride_for_user(user_id: int) -> Ride | None
+is_vehicle_in_ride(vehicle_id: str) -> bool
+active_user_ids() -> list[int]
+active_ride_ids() -> list[int]
+FleetManager
+stations: dict[int, Station]
+vehicles: dict[str, Vehicle]
+users: dict[int, User]
+active_rides: ActiveRidesRegistry
+degraded_repo: DegradedRepo
+billing_service: BillingService
+register_user(payment_token: str) -> int
+nearest_station(lat: float, lon: float) -> Station
+start_ride(user_id: int, lat: float, lon: float) -> dict
+end_ride(ride_id: int, lat: float, lon: float) -> dict
+report_degraded(user_id: int, vehicle_id: str) -> None
+treat_vehicles() -> list[str]
+active_rides_user_ids() -> list[int]
+_find_station_with_free_slot() -> Station | None
+_list_station_eligible_vehicle_ids(station: Station) -> list[str]
+_choose_vehicle_deterministic(vehicle_ids: list[str]) -> str | None
+_distance(lat1, lon1, lat2, lon2) -> float
+BillingService
+base_price: int
+compute_charge(ride: Ride) -> int
+process_payment(user: User, amount: int) -> bool
+Ride
+ride_id: int
+user_id: int
+vehicle_id: str
+start_time: datetime
+end_time: datetime | None
+start_station_id: int
+end_station_id: int | None
+reported_degraded: bool
+price: int | None
+is_active() -> bool
+end(end_station_id: int, end_time: datetime) -> None
+report_degraded() -> None
+duration_seconds() -> int
+StationDataLoader(DataLoader)
+create_objects() -> dict[int, Station]
+_parse_row(row: dict[str, str]) -> tuple[int, Station]
+<<abstract>> DataLoader
+csv_path: str
+_load_rows() -> list[dict[str, str]]
+create_objects() -> dict[Any, Any] 
+_parse_row(row: dict[str, str]) -> tuple[Any, Any] {abstract} 
+VehicleStatus
+AVAILABLE
+DEGRADED 
+VehicleType
+BICYCLE
+E_BIKE
+SCOOTER 
+VehicleLocation
+DOCKED
+IN_RIDE
+IN_REPO
+EBike(ElectricVehicle)
+VehicleDataLoader(DataLoader)
+create_objects() -> dict[str, Vehicle]
+_parse_row(row: dict[str, str]) -> tuple[str, Vehicle]
+UML Class Diagram
