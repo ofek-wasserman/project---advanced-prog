@@ -12,6 +12,9 @@ line-length = 100
 target-version = "py311"
 select = ["E", "F", "W", "I"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["E501"]
+
 [tool.black]
 line-length = 100
 target-version = ["py311"]

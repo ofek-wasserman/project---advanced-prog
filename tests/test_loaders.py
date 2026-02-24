@@ -1,12 +1,10 @@
 import csv
-import tempfile
 from datetime import date
 from pathlib import Path
 
 import pytest
 
 from src.data.loaders import StationDataLoader, VehicleDataLoader
-
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
