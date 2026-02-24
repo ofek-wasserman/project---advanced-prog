@@ -8,16 +8,23 @@ from typing import Any
 
 
 class DataLoader(ABC):
-    """Abstract base for CSV loaders. Subclasses implement _parse_row."""
+    """Abstract base class for CSV data loaders.
+
+    Subclasses must implement ``_parse_row`` to convert each raw CSV
+    row (dict of strings) into a ``(primary_key, domain_object)`` pair.
+    ``create_objects`` drives the full load and returns a keyed dict.
+    """
 
     def __init__(self, csv_path: str | Path) -> None:
         self.csv_path = Path(csv_path)
 
     def create_objects(self) -> dict[Any, Any]:
+        """Load the CSV and return a dict of parsed domain objects."""
         rows = self._load_rows()
         return dict(self._parse_row(row) for row in rows)
 
     def _load_rows(self) -> list[dict[str, str]]:
+        """Read all rows from the CSV file. Raises FileNotFoundError if missing."""
         if not self.csv_path.exists():
             raise FileNotFoundError(f"CSV not found: {self.csv_path}")
         with self.csv_path.open(newline="", encoding="utf-8") as fh:
