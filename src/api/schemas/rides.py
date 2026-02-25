@@ -2,7 +2,7 @@ from src.api.schemas.base import StrictBaseModel
 
 class StartRideRequest(StrictBaseModel):
     user_id: int
-    station_id: str
+    station_id: int
     
 class StartRideResponse(StrictBaseModel):
     ride_id: int
