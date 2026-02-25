@@ -8,7 +8,7 @@ IDs and Types
 ----------------------------------------
 
 - station_id: int (from stations.csv, never regenerated)
-- vehicle_id: int (from vehicles.csv, never regenerated)
+- vehicle_id: str (from vehicles.csv, never regenerated)
 - user_id: int (generated incrementally by the system)
 - ride_id: int (generated incrementally by the system)
 
