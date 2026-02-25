@@ -13,10 +13,10 @@ Modules:
 
 Example:
     The API is initialized and run through the main application module::
-    
+
         from src.api.router import api_router
         from fastapi import FastAPI
-        
+
         app = FastAPI()
         app.include_router(api_router)
 

@@ -9,9 +9,10 @@ Attributes:
 """
 
 from fastapi import APIRouter
+
 from src.api.routes.health import router as health_router
-from src.api.routes.users import router as users_router
 from src.api.routes.rides import router as rides_router
+from src.api.routes.users import router as users_router
 
 api_router = APIRouter()
 
