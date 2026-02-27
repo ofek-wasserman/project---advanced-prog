@@ -4,20 +4,32 @@ from src.data.persistence import SnapshotManager
 
 SAMPLE_SNAPSHOT = {
     "stations": {
-        "1": {"station_id": 1, "name": "Dizengoff Sq", "lat": 32.0796, "lon": 34.7739, "max_capacity": 10},
+        "1": {
+            "station_id": 1,
+            "name": "Dizengoff Sq",
+            "lat": 32.0796,
+            "lon": 34.7739,
+            "max_capacity": 10,
+        },
     },
     "vehicles": {
         "V001": {
-            "vehicle_id": "V001", "type": "BICYCLE", "status": "AVAILABLE",
+            "vehicle_id": "V001",
+            "type": "BICYCLE",
+            "status": "AVAILABLE",
             "rides_since_last_treated": 2,
             "last_treated_date": date(2026, 2, 1),
-            "station_id": 1, "charge_pct": None,
+            "station_id": 1,
+            "charge_pct": None,
         },
         "V006": {
-            "vehicle_id": "V006", "type": "E_BIKE", "status": "AVAILABLE",
+            "vehicle_id": "V006",
+            "type": "E_BIKE",
+            "status": "AVAILABLE",
             "rides_since_last_treated": 1,
             "last_treated_date": date(2026, 2, 18),
-            "station_id": 1, "charge_pct": 85,
+            "station_id": 1,
+            "charge_pct": 85,
         },
     },
     "users": {
@@ -25,11 +37,15 @@ SAMPLE_SNAPSHOT = {
     },
     "active_rides": {
         "7": {
-            "ride_id": 7, "user_id": 42, "vehicle_id": "V006",
+            "ride_id": 7,
+            "user_id": 42,
+            "vehicle_id": "V006",
             "start_time": datetime(2026, 2, 24, 10, 0, 0),
             "end_time": None,
-            "start_station_id": 1, "end_station_id": None,
-            "reported_degraded": False, "price": None,
+            "start_station_id": 1,
+            "end_station_id": None,
+            "reported_degraded": False,
+            "price": None,
         }
     },
     "degraded_repo": ["V004"],
@@ -37,7 +53,6 @@ SAMPLE_SNAPSHOT = {
 
 
 class TestSnapshotManager:
-
     def test_returns_none_when_no_file(self, tmp_path):
         sm = SnapshotManager(tmp_path / "snapshot.json")
         assert sm.load() is None

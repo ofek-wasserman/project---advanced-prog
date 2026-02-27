@@ -6,13 +6,16 @@ from src.domain.VehicleContainer import DegradedRepo, Station, VehicleContainer
 # Fixtures
 # =====================================================
 
+
 @pytest.fixture
 def empty_container():
     return VehicleContainer(1, set(), "Empty Container")
 
+
 @pytest.fixture
 def container_with_vehicle():
     return VehicleContainer(2, {"V1"}, "Container with Vehicle")
+
 
 @pytest.fixture
 def test_station():
@@ -24,6 +27,7 @@ def test_station():
         lon=40.0,
         max_capacity=5,
     )
+
 
 @pytest.fixture
 def test_degraded_repo():
@@ -37,6 +41,7 @@ def test_degraded_repo():
 # =====================================================
 # VehicleContainer Tests
 # =====================================================
+
 
 def test_add_vehicle(empty_container):
     empty_container.add_vehicle("V1")
@@ -99,6 +104,7 @@ def test_initial_state_values():
 # Station Tests
 # =====================================================
 
+
 def test_station_inherits_container_behavior(test_station):
     station = test_station
 
@@ -110,7 +116,6 @@ def test_station_inherits_container_behavior(test_station):
 
 def test_station_has_free_slot_true(test_station):
     assert test_station.has_free_slot() is True
-
 
 
 def test_station_has_free_slot_false_when_full():
@@ -158,6 +163,7 @@ def test_station_coordinates_and_capacity_stored_correctly():
 # DegradedRepo Tests
 # =====================================================
 
+
 def test_degraded_repo_behaves_like_container(test_degraded_repo):
 
     test_degraded_repo.add_vehicle("V2")
@@ -170,6 +176,7 @@ def test_degraded_repo_remove_vehicle(test_degraded_repo):
     test_degraded_repo.remove_vehicle("V1")
 
     assert test_degraded_repo.count() == 0
+
 
 def test_degraded_repo_metadata():
     repo = DegradedRepo(

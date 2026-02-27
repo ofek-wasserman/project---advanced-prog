@@ -21,11 +21,11 @@ class Vehicle(ABC):
     def __init__(
         self,
         vehicle_id: str,
-        status: 've.VehicleStatus',
+        status: "ve.VehicleStatus",
         rides_since_last_treated: int,
         last_treated_date: date,
         station_id: int | None,
-        active_ride_id: int | None
+        active_ride_id: int | None,
     ):
         """
         Initialize a vehicle with its persistent state.
@@ -46,9 +46,7 @@ class Vehicle(ABC):
 
         # Derived state based on docking
         self.location = (
-            ve.VehicleLocation.DOCKED
-            if station_id is not None
-            else ve.VehicleLocation.IN_REPO
+            ve.VehicleLocation.DOCKED if station_id is not None else ve.VehicleLocation.IN_REPO
         )
 
     @abstractmethod
@@ -148,6 +146,7 @@ class Vehicle(ABC):
         self.active_ride_id = None
         self.location = ve.VehicleLocation.IN_REPO
 
+
 class Bicycle(Vehicle):
     """
     Concrete implementation of a mechanical bicycle.
@@ -160,11 +159,11 @@ class Bicycle(Vehicle):
     def __init__(
         self,
         vehicle_id: str,
-        status: 've.VehicleStatus',
+        status: "ve.VehicleStatus",
         rides_since_last_treated: int,
         last_treated_date: date,
         station_id: int | None,
-        active_ride_id: int | None
+        active_ride_id: int | None,
     ):
         """
         Initialize a Bicycle instance.
@@ -177,7 +176,7 @@ class Bicycle(Vehicle):
             rides_since_last_treated,
             last_treated_date,
             station_id,
-            active_ride_id
+            active_ride_id,
         )
 
     def is_eligible(self) -> bool:
@@ -188,10 +187,7 @@ class Bicycle(Vehicle):
 
         Used by Service layer during deterministic vehicle selection.
         """
-        return (
-            self.status == ve.VehicleStatus.AVAILABLE
-            and self.rides_since_last_treated <= 10
-        )
+        return self.status == ve.VehicleStatus.AVAILABLE and self.rides_since_last_treated <= 10
 
     def can_initiate_treatment(self) -> bool:
         """
@@ -200,10 +196,7 @@ class Bicycle(Vehicle):
         OR
         - It is marked as DEGRADED
         """
-        return (
-            self.rides_since_last_treated >= 7
-            or self.status == ve.VehicleStatus.DEGRADED
-        )
+        return self.rides_since_last_treated >= 7 or self.status == ve.VehicleStatus.DEGRADED
 
 
 class ElectricVehicle(Vehicle):
@@ -221,12 +214,12 @@ class ElectricVehicle(Vehicle):
     def __init__(
         self,
         vehicle_id: str,
-        status: 've.VehicleStatus',
+        status: "ve.VehicleStatus",
         rides_since_last_treated: int,
         last_treated_date: date,
         station_id: int | None,
         active_ride_id: int | None,
-        charge_pct: int
+        charge_pct: int,
     ):
         """
         Initialize electric vehicle state.
@@ -239,12 +232,13 @@ class ElectricVehicle(Vehicle):
             rides_since_last_treated,
             last_treated_date,
             station_id,
-            active_ride_id
+            active_ride_id,
         )
         self.charge_pct = charge_pct
 
     def is_eligible(self) -> bool:
         pass
+
     def can_initiate_treatment(self) -> bool:
         pass
 
@@ -290,12 +284,12 @@ class EBike(ElectricVehicle):
     def __init__(
         self,
         vehicle_id: str,
-        status: 've.VehicleStatus',
+        status: "ve.VehicleStatus",
         rides_since_last_treated: int,
         last_treated_date: date,
         station_id: int | None,
         active_ride_id: int | None,
-        charge_pct: int
+        charge_pct: int,
     ):
         super().__init__(
             vehicle_id,
@@ -304,7 +298,7 @@ class EBike(ElectricVehicle):
             last_treated_date,
             station_id,
             active_ride_id,
-            charge_pct
+            charge_pct,
         )
 
     def is_eligible(self) -> bool:
@@ -328,11 +322,7 @@ class EBike(ElectricVehicle):
         Electric vehicle treatment rule:
         Same threshold as Bicycle (7 rides) OR if degraded.
         """
-        return (
-            self.rides_since_last_treated >= 7
-            or self.status == ve.VehicleStatus.DEGRADED
-        )
-
+        return self.rides_since_last_treated >= 7 or self.status == ve.VehicleStatus.DEGRADED
 
 
 class Scooter(ElectricVehicle):
@@ -347,12 +337,12 @@ class Scooter(ElectricVehicle):
     def __init__(
         self,
         vehicle_id: str,
-        status: 've.VehicleStatus',
+        status: "ve.VehicleStatus",
         rides_since_last_treated: int,
         last_treated_date: date,
         station_id: int | None,
         active_ride_id: int | None,
-        charge_pct: int
+        charge_pct: int,
     ):
         super().__init__(
             vehicle_id,
@@ -361,7 +351,7 @@ class Scooter(ElectricVehicle):
             last_treated_date,
             station_id,
             active_ride_id,
-            charge_pct
+            charge_pct,
         )
 
     def is_eligible(self) -> bool:
@@ -385,7 +375,4 @@ class Scooter(ElectricVehicle):
         Electric vehicle treatment rule:
         Same threshold as Bicycle (7 rides) OR if degraded.
         """
-        return (
-            self.rides_since_last_treated >= 7
-            or self.status == ve.VehicleStatus.DEGRADED
-        )
+        return self.rides_since_last_treated >= 7 or self.status == ve.VehicleStatus.DEGRADED

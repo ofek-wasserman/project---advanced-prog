@@ -6,8 +6,6 @@ class VehicleStatus(Enum):
     DEGRADED = "degraded"
 
 
-
-
 class VehicleLocation(Enum):
     DOCKED = "docked"
     IN_RIDE = "in_ride"

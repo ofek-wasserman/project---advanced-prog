@@ -17,12 +17,7 @@ class VehicleContainer:
     Does NOT enforce business rules (e.g., capacity limits).
     """
 
-    def __init__(
-        self,
-        container_id: int,
-        _vehicle_ids: set[str],
-        name: str
-    ):
+    def __init__(self, container_id: int, _vehicle_ids: set[str], name: str):
         """
         Initialize container with:
         - Unique identifier
@@ -98,7 +93,7 @@ class Station(VehicleContainer):
         name: str,
         lat: float,
         lon: float,
-        max_capacity: int
+        max_capacity: int,
     ):
         """
         Initialize station with:
@@ -131,10 +126,5 @@ class DegradedRepo(VehicleContainer):
     The Service layer decides when vehicles are moved here.
     """
 
-    def __init__(
-        self,
-        container_id: int,
-        _vehicle_ids: set[str],
-        name: str
-    ):
+    def __init__(self, container_id: int, _vehicle_ids: set[str], name: str):
         super().__init__(container_id, _vehicle_ids, name)
