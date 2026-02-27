@@ -1,19 +1,21 @@
 import pytest
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 
-from src.main import app
+from src.api.main import app
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_register_missing_body_returns_400():
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.post("/users/register", json={})  # missing payment_token
     assert resp.status_code == 400
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_start_ride_wrong_types_returns_400():
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.post(
             "/rides/start",
             json={"user_id": "not-an-int", "station_id": 1},
