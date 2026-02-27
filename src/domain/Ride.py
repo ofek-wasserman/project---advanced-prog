@@ -82,7 +82,7 @@ class Ride:
 
         self.end_station_id = end_station_id
         self.end_time = end_time
-    
+
 
     def report_degraded(self) -> None:
         """Mark ride as degraded."""
