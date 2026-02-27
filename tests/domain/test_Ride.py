@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from src.domain.Ride import Ride
+from src.domain.ride import Ride
 
 
 @pytest.fixture

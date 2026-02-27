@@ -82,7 +82,7 @@ class Ride:
 
         self.end_station_id = end_station_id
         self.end_time = end_time
-        self.price = 15 #TODO: replace with pricing logic in Phase 2
+    
 
     def report_degraded(self) -> None:
         """Mark ride as degraded."""

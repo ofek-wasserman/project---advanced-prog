@@ -1,6 +1,6 @@
 import pytest
 
-from src.domain.User import User
+from src.domain.user import User
 
 
 def test_user_creation_valid():
