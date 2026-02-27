@@ -61,18 +61,18 @@ class SnapshotManager:
         degraded_ids = list(degraded_repo.list_vehicle_ids()) if degraded_repo else []
 
         return {
-            "stations":     {str(k): _to_dict(v) for k, v in fleet_manager.stations.items()},
-            "vehicles":     {str(k): _to_dict(v) for k, v in fleet_manager.vehicles.items()},
-            "users":        {str(k): _to_dict(v) for k, v in fleet_manager.users.items()},
+            "stations": {str(k): _to_dict(v) for k, v in fleet_manager.stations.items()},
+            "vehicles": {str(k): _to_dict(v) for k, v in fleet_manager.vehicles.items()},
+            "users": {str(k): _to_dict(v) for k, v in fleet_manager.users.items()},
             "active_rides": active_rides,
             "degraded_repo": degraded_ids,
         }
 
     def _restore(self, raw: dict) -> dict:
         return {
-            "stations":     self._restore_stations(raw.get("stations", {})),
-            "vehicles":     self._restore_vehicles(raw.get("vehicles", {})),
-            "users":        {int(k): v for k, v in raw.get("users", {}).items()},
+            "stations": self._restore_stations(raw.get("stations", {})),
+            "vehicles": self._restore_vehicles(raw.get("vehicles", {})),
+            "users": {int(k): v for k, v in raw.get("users", {}).items()},
             "active_rides": self._restore_rides(raw.get("active_rides", {})),
             "degraded_repo": raw.get("degraded_repo", []),
         }

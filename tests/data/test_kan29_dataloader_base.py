@@ -1,4 +1,5 @@
 """Unit tests for KAN-29 — DataLoader abstract base class."""
+
 import csv
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import pytest
 from src.data.loaders import DataLoader
 
 # ── minimal concrete subclass ────────────────────────────────────────────────
+
 
 class _IntLoader(DataLoader):
     """Toy loader: CSV must have columns 'id' and 'val'."""
@@ -24,8 +26,8 @@ def _write_csv(path: Path, rows: list[dict]) -> None:
 
 # ── tests ────────────────────────────────────────────────────────────────────
 
-class TestDataLoaderBase:
 
+class TestDataLoaderBase:
     def test_cannot_instantiate_directly(self):
         with pytest.raises(TypeError):
             DataLoader("any.csv")  # type: ignore[abstract]
