@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import csv
 from abc import ABC, abstractmethod
-from datetime import date
 from pathlib import Path
 from typing import Any
 
+from src.domain.VehicleContainer import Station
+
 
 class DataLoader(ABC):
-    """Abstract base for CSV loaders. Subclasses implement _parse_row."""
+    """Abstract base for CSV loaders"""
 
     def __init__(self, csv_path: str | Path) -> None:
         self.csv_path = Path(csv_path)
@@ -25,43 +26,20 @@ class DataLoader(ABC):
 
     @abstractmethod
     def _parse_row(self, row: dict[str, str]) -> tuple[Any, Any]:
-        """Return (primary_key, domain_object) for a single CSV row."""
+        pass
 
 
 class StationDataLoader(DataLoader):
-    """Loads stations.csv → dict[int, Station]."""
+    """Loads stations.csv -> dict[int, Station]"""
 
-    def _parse_row(self, row: dict[str, str]) -> tuple[int, dict]:
+    def _parse_row(self, row: dict[str, str]) -> tuple[int, Station]:
         station_id = int(row["station_id"])
-        data = {
-            "station_id": station_id,
-            "name": row["name"].strip(),
-            "lat": float(row["lat"]),
-            "lon": float(row["lon"]),
-            "max_capacity": int(row["max_capacity"]),
-        }
-        # TODO: return station_id, Station(**data)  once domain models are ready
-        return station_id, data
-
-
-class VehicleDataLoader(DataLoader):
-    """Loads vehicles.csv → dict[str, Vehicle].
-
-    charge_pct is blank in the CSV for Bicycle rows (non-electric).
-    """
-
-    def _parse_row(self, row: dict[str, str]) -> tuple[str, dict]:
-        vehicle_id = row["vehicle_id"].strip()
-        charge_raw = row.get("charge_pct", "").strip()
-
-        data = {
-            "vehicle_id": vehicle_id,
-            "type": row["type"].strip(),
-            "status": row["status"].strip(),
-            "rides_since_last_treated": int(row["rides_since_last_treated"]),
-            "last_treated_date": date.fromisoformat(row["last_treated_date"]),
-            "station_id": int(row["station_id"]),
-            "charge_pct": int(charge_raw) if charge_raw else None,
-        }
-        # TODO: return vehicle_id, <Vehicle subclass>(**data)  once domain models are ready
-        return vehicle_id, data
+        station = Station(
+            container_id=station_id,
+            _vehicle_ids=set(),
+            name=row["name"].strip(),
+            lat=float(row["lat"]),
+            lon=float(row["lon"]),
+            max_capacity=int(row["max_capacity"]),
+        )
+        return station_id, station
