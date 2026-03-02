@@ -14,6 +14,8 @@ from src.domain.VehicleContainer import Station
 class DataLoader(ABC):
     """Abstract base for CSV loaders"""
 
+    REQUIRED_COLUMNS: frozenset[str] = frozenset()
+
     def __init__(self, csv_path: str | Path) -> None:
         self.csv_path = Path(csv_path)
 
@@ -25,7 +27,17 @@ class DataLoader(ABC):
         if not self.csv_path.exists():
             raise FileNotFoundError(f"CSV not found: {self.csv_path}")
         with self.csv_path.open(newline="", encoding="utf-8") as fh:
-            return list(csv.DictReader(fh))
+            reader = csv.DictReader(fh)
+            rows = list(reader)
+            self._validate_columns(set(reader.fieldnames or []))
+            return rows
+
+    def _validate_columns(self, present: set[str]) -> None:
+        missing = self.REQUIRED_COLUMNS - present
+        if missing:
+            raise ValueError(
+                f"{self.__class__.__name__}: missing required columns: {sorted(missing)}"
+            )
 
     @abstractmethod
     def _parse_row(self, row: dict[str, str]) -> tuple[Any, Any]:
@@ -34,6 +46,8 @@ class DataLoader(ABC):
 
 class StationDataLoader(DataLoader):
     """Loads stations.csv -> dict[int, Station]"""
+
+    REQUIRED_COLUMNS = frozenset({"station_id", "name", "lat", "lon", "max_capacity"})
 
     def _parse_row(self, row: dict[str, str]) -> tuple[int, Station]:
         station_id = int(row["station_id"])
