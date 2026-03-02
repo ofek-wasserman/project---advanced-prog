@@ -1,7 +1,7 @@
 [project]
 name = "vehicle-sharing-api"
 version = "0.1.0"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -9,12 +9,12 @@ python_files = ["test_*.py"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
-select = ["E", "F", "W", "I"]
+target-version = "py312"
+lint.select = ["E", "F", "W", "I"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["E501"]
 
 [tool.black]
 line-length = 100
-target-version = ["py311"]
+target-version = ["py312"]
