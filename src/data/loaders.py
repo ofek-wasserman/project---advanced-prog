@@ -74,7 +74,7 @@ class VehicleDataLoader(DataLoader):
         station_id = int(row["station_id"])
 
         if vehicle_type == "bicycle":
-            vehicle: Vehicle = Bicycle(
+            vehicle = Bicycle(
                 vehicle_id=vehicle_id,
                 status=status,
                 rides_since_last_treated=rides,
