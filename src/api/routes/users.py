@@ -14,11 +14,13 @@ Note:
 
 from fastapi import APIRouter, HTTPException
 
+from src.api.schemas.users import RegisterRequest, RegisterResponse
+
 router = APIRouter()
 
 
-@router.post("/register")
-async def register_user():
+@router.post("/register", response_model=RegisterResponse, status_code=201)
+async def register_user(_req: RegisterRequest) -> RegisterResponse:
     """Register a new user account.
 
     Creates a new user account with the provided credentials and personal information.

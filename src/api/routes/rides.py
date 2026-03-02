@@ -16,11 +16,13 @@ Note:
 
 from fastapi import APIRouter, HTTPException
 
+from src.api.schemas.rides import EndRideResponse, StartRideRequest, StartRideResponse
+
 router = APIRouter()
 
 
-@router.post("/start")
-async def start_ride():
+@router.post("/start", response_model=StartRideResponse)
+async def start_ride(_req: StartRideRequest) -> StartRideResponse:
     """Start a new ride session.
 
     Initiates a new ride for a user, recording the start time and vehicle
@@ -45,8 +47,8 @@ async def start_ride():
     raise HTTPException(status_code=501, detail="Not implemented yet")
 
 
-@router.post("/{ride_id}/end")
-async def end_ride(ride_id: int):
+@router.post("/{ride_id}/end", response_model=EndRideResponse)
+async def end_ride(ride_id: int) -> EndRideResponse:
     """Complete an active ride session.
 
     Ends an active ride session identified by its ride_id. Records the end time
