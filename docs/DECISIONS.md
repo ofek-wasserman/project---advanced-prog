@@ -73,3 +73,62 @@ Phase 2:
 - Save/load mutable runtime state
   (vehicle status, degraded state, active rides if required).
 - Restart behavior must not corrupt state.
+
+----------------------------------------
+Fleet Invariants (Phase 1)
+----------------------------------------
+
+The following invariants must always hold during runtime.
+
+----------------------------------------
+Vehicle Eligibility (Phase 1)
+----------------------------------------
+
+A vehicle is considered eligible (rentable) if:
+
+- status == AVAILABLE
+- active_ride_id is None
+- rides_since_last_treated <= 10
+
+Vehicle degradation rules:
+
+- A vehicle becomes unrentable (degraded) if:
+  - rides_since_last_treated > 10, or
+  - a user reports it as degraded
+
+Maintenance / treatment rules:
+
+- Treatment may be initiated only on:
+  - degraded vehicles, or
+  - vehicles with rides_since_last_treated >= 7
+
+Eligibility rules may expand in Phase 2, but the concept of eligibility remains centralized in the service layer.
+
+----------------------------------------
+Station Membership Invariant
+----------------------------------------
+
+Regular stations must contain only eligible vehicles.
+
+Vehicles that are not eligible must not remain in regular stations.
+
+Specifically:
+
+- Vehicles currently in ride belong to the Active Rides registry.
+- Vehicles reported as degraded belong to the Degraded Repository.
+- Vehicles with rides_since_last_treated > 10 belong to the Degraded Repository.
+
+----------------------------------------
+Bootstrap Normalization Rule
+----------------------------------------
+
+On system startup (after CSV bootstrap):
+
+FleetManager must validate all loaded vehicles and normalize system state:
+
+- Ineligible vehicles must be removed from regular stations.
+- Ineligible vehicles must be placed in the appropriate repository.
+- Regular stations must end initialization containing only eligible vehicles.
+
+This invariant must be maintained on every state transition
+(start ride, end ride, maintenance handling).
