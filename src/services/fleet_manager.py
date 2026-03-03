@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
 
 from src.data.loaders import StationDataLoader, VehicleDataLoader
+from src.domain.user import User
 from src.domain.Vehicle import Vehicle
-from src.domain.VehicleContainer import Station
+from src.domain.VehicleContainer import DegradedRepo, Station
+from src.services.active_rides import ActiveRidesRegistry
+from src.services.billing import BillingService
 
 
 class FleetManager:
@@ -20,9 +24,18 @@ class FleetManager:
         self,
         stations: dict[int, Station],
         vehicles: dict[str, Vehicle],
+        active_rides: Optional[ActiveRidesRegistry] = None,
+        degraded_repo: Optional[DegradedRepo] = None,
+        billing_service: Optional[BillingService] = None,
     ) -> None:
+        self.users: dict[int, User] = {}
         self.stations = stations
         self.vehicles = vehicles
+        self.active_rides = active_rides or ActiveRidesRegistry()
+        self.degraded_repo = degraded_repo or DegradedRepo(
+            container_id=-1, _vehicle_ids=set(), name="Degraded Repo"
+        )
+        self.billing_service = billing_service or BillingService()
         self._link_vehicles_to_stations()
 
     # ------------------------------------------------------------------
@@ -82,3 +95,61 @@ class FleetManager:
             sid = vehicle.station_id
             if sid is not None and sid in self.stations:
                 self.stations[sid].add_vehicle(vehicle.vehicle_id)
+
+    # ------------------------------------------------------------------
+    # Business methods (stubs — implemented in later tickets)
+    # ------------------------------------------------------------------
+
+    def register_user(self, payment_token: str) -> User:
+        """
+        Registers a new user and generates a unique user_id.
+
+        Args:
+            payment_token: The payment token for the user.
+
+        Returns:
+            The newly created User object.
+        """
+        raise NotImplementedError("KAN-21: Implement FleetManager Class")
+
+    def start_ride(self, user_id: int, location: tuple[float, float]) -> dict:
+        """
+        Start a ride for a user with a specific vehicle.
+
+        Args:
+            user_id: The unique identifier for the user.
+            location: The (latitude, longitude) of the user.
+
+        Returns:
+            Ride info dict plus (lat, lon) of the start station.
+        """
+        raise NotImplementedError("KAN-21: Implement FleetManager Class")
+
+    def end_ride(self, ride_id: int, location: tuple[float, float]) -> dict:
+        """
+        End a ride for a user with a specific vehicle.
+
+        Args:
+            ride_id: The unique identifier for the ride.
+            location: The (latitude, longitude) where the ride ended.
+
+        Returns:
+            End-station location and payment info.
+        """
+        raise NotImplementedError("KAN-21: Implement FleetManager Class")
+
+    def _generate_ride_id(self) -> int:
+        """Generates a new unique ride ID."""
+        raise NotImplementedError("KAN-21: Implement FleetManager Class")
+
+    def _nearest_station_with_free_slot(
+        self, location: tuple[float, float]
+    ) -> Optional[Station]:
+        """Find the nearest station with a free slot for parking."""
+        raise NotImplementedError("KAN-21: Implement FleetManager Class")
+
+    def _nearest_station_with_available_vehicle(
+        self, location: tuple[float, float]
+    ) -> Optional[Station]:
+        """Find the nearest station with at least one available vehicle."""
+        raise NotImplementedError("KAN-21: Implement FleetManager Class")
