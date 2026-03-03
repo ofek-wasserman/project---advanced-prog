@@ -16,12 +16,12 @@ Note:
 
 from fastapi import APIRouter, HTTPException
 
-from src.api.schemas.rides import EndRideResponse, StartRideRequest, StartRideResponse
+from src.api.schemas.rides import ActiveUsersResponse, EndRideRequest, EndRideResponse, StartRideRequest, StartRideResponse
 
 router = APIRouter()
 
 
-@router.post("/start", response_model=StartRideResponse)
+@router.post("/ride/start", response_model=StartRideResponse)
 async def start_ride(_req: StartRideRequest) -> StartRideResponse:
     """Start a new ride session.
 
@@ -47,8 +47,8 @@ async def start_ride(_req: StartRideRequest) -> StartRideResponse:
     raise HTTPException(status_code=501, detail="Not implemented yet")
 
 
-@router.post("/{ride_id}/end", response_model=EndRideResponse)
-async def end_ride(ride_id: int) -> EndRideResponse:
+@router.post("/ride/end", response_model=EndRideResponse)
+async def end_ride(_req: EndRideRequest) -> EndRideResponse:
     """Complete an active ride session.
 
     Ends an active ride session identified by its ride_id. Records the end time
@@ -56,7 +56,7 @@ async def end_ride(ride_id: int) -> EndRideResponse:
     ride_id after completion.
 
     Args:
-        ride_id (int): The unique identifier of the ride to end.
+        _req (EndRideRequest): The request object containing ride_id and location data.
 
     Returns:
         dict: Ride completion information including total duration and cost.
@@ -73,5 +73,18 @@ async def end_ride(ride_id: int) -> EndRideResponse:
         - Implement ride completion logic
         - Calculate ride cost and duration
         - Update vehicle location
+    """
+    raise HTTPException(status_code=501, detail="Not implemented yet")
+
+
+@router.get("/rides/active-users", response_model=ActiveUsersResponse)
+async def active_users() -> ActiveUsersResponse:
+    """Get list of active user IDs.
+
+    Returns:
+        ActiveUsersResponse: The list of active user IDs.
+
+    Raises:
+        HTTPException: 501 Not Implemented - Feature not yet available.
     """
     raise HTTPException(status_code=501, detail="Not implemented yet")
