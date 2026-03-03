@@ -12,15 +12,18 @@ Note:
     in future development iterations.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, status
 
+from ..dependencies import get_fleet_manager
 from src.api.schemas.users import RegisterRequest, RegisterResponse
+from src.services.fleet_manager import FleetManager
 
 router = APIRouter()
 
 
-@router.post("/register", response_model=RegisterResponse, status_code=201)
-async def register_user(_req: RegisterRequest) -> RegisterResponse:
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_200_OK)
+async def register_user(_req: RegisterRequest,
+                        fleet_manager: FleetManager = Depends(get_fleet_manager)) -> RegisterResponse:
     """Register a new user account.
 
     Creates a new user account with the provided credentials and personal information.
@@ -33,7 +36,7 @@ async def register_user(_req: RegisterRequest) -> RegisterResponse:
     Raises:
         HTTPException: 501 Not Implemented - Feature not yet available.
         HTTPException: 400 Bad Request - Invalid email format or weak password.
-        HTTPException: 409 Conflict - Email already registered.
+        
 
     Example:
         >>> response = await register_user()
@@ -43,6 +46,10 @@ async def register_user(_req: RegisterRequest) -> RegisterResponse:
         - Implement user creation and validation
         - Hash and securely store passwords
         - Generate authentication tokens
-        - Send verification emails
+        
     """
-    raise HTTPException(status_code=501, detail="Not implemented yet")
+    try:
+        user_id = fleet_manager.register_user(payment_token=_req.payment_token)
+        return RegisterResponse(user_id=user_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
