@@ -1,4 +1,4 @@
-"""KAN-62 - Startup / bootstrap smoketest.
+"""Startup / bootstrap smoketest.
 
 Verifies that the FastAPI application factory completes without errors,
 registers the expected routes, and serves basic requests correctly.
@@ -28,7 +28,7 @@ def client(app: FastAPI) -> TestClient:
 
 
 @pytest.fixture(scope="module")
-def route_paths(app: FastAPI) -> set:
+def route_paths(app: FastAPI) -> set[str]:
     return {route.path for route in app.routes}
 
 
@@ -54,17 +54,23 @@ class TestAppFactory:
 
 
 class TestRouteRegistration:
-    def test_health_route_registered(self, route_paths: set) -> None:
+    def test_health_route_registered(self, route_paths: set[str]) -> None:
         assert "/health" in route_paths
 
-    def test_users_register_route_registered(self, route_paths: set) -> None:
-        assert "/users/register" in route_paths
+    def test_register_route_registered(self, route_paths: set[str]) -> None:
+        assert "/register" in route_paths
 
-    def test_rides_start_route_registered(self, route_paths: set) -> None:
-        assert "/rides/start" in route_paths
+    def test_ride_start_route_registered(self, route_paths: set[str]) -> None:
+        assert "/ride/start" in route_paths
 
-    def test_rides_end_route_registered(self, route_paths: set) -> None:
-        assert "/rides/{ride_id}/end" in route_paths
+    def test_ride_end_route_registered(self, route_paths: set[str]) -> None:
+        assert "/ride/end" in route_paths
+
+    def test_stations_nearest_route_registered(self, route_paths: set[str]) -> None:
+        assert "/stations/nearest" in route_paths
+
+    def test_rides_active_users_route_registered(self, route_paths: set[str]) -> None:
+        assert "/rides/active-users" in route_paths
 
 
 # ---------------------------------------------------------------------------
@@ -84,5 +90,5 @@ class TestHttpBehaviour:
 
     def test_validation_error_returns_400_not_422(self, client: TestClient) -> None:
         """The custom RequestValidationError handler must downgrade 422 to 400."""
-        response = client.post("/users/register", json={})
+        response = client.post("/register", json={})
         assert response.status_code == 400
