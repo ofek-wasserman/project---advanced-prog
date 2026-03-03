@@ -24,7 +24,7 @@ class TestFleetManager:
         vehicles = {10: MagicMock()}
 
         active = ActiveRidesRegistry()
-        repo = DegradedRepo(container_id=-1,_vehicle_ids=set(),name="Degraded Repo")
+        repo = DegradedRepo(container_id=-1, _vehicle_ids=set(), name="Degraded Repo")
         billing = BillingService()
 
         fm = FleetManager(
@@ -50,3 +50,66 @@ class TestFleetManager:
         assert fm1.active_rides is not fm2.active_rides
         assert fm1.degraded_repo is not fm2.degraded_repo
         assert fm1.billing_service is not fm2.billing_service
+
+    def test_initialize_state_eligible_vehicle_stays_in_station(self):
+        station = MagicMock()
+        station.remove_vehicle = MagicMock()
+
+        stations = {1: station}
+
+        vehicle = MagicMock()
+        vehicle.is_eligible.return_value = True
+        vehicle.station_id = 1
+        vehicle.mark_degraded = MagicMock()
+
+        vehicles = {101: vehicle}
+
+        degraded_repo = MagicMock()
+        degraded_repo.add_vehicle = MagicMock()
+
+        FleetManager(stations=stations, vehicles=vehicles, degraded_repo=degraded_repo)
+
+        degraded_repo.add_vehicle.assert_not_called()
+        vehicle.mark_degraded.assert_not_called()
+        station.remove_vehicle.assert_not_called()
+
+    def test_initialize_state_ineligible_vehicle_moved_and_removed(self):
+        station = MagicMock()
+        station.remove_vehicle = MagicMock()
+
+        stations = {1: station}
+
+        vehicle = MagicMock()
+        vehicle.is_eligible.return_value = False
+        vehicle.station_id = 1
+        vehicle.mark_degraded = MagicMock()
+
+        vehicles = {202: vehicle}
+
+        degraded_repo = MagicMock()
+        degraded_repo.add_vehicle = MagicMock()
+
+        FleetManager(stations=stations, vehicles=vehicles, degraded_repo=degraded_repo)
+
+        degraded_repo.add_vehicle.assert_called_once_with(202)
+        vehicle.mark_degraded.assert_called_once()
+        station.remove_vehicle.assert_called_once_with(202)
+
+    def test_initialize_state_ineligible_vehicle_missing_station(self):
+        # station_id points to a station that doesn't exist -> should not crash
+        stations = {}
+
+        vehicle = MagicMock()
+        vehicle.is_eligible.return_value = False
+        vehicle.station_id = 99
+        vehicle.mark_degraded = MagicMock()
+
+        vehicles = {303: vehicle}
+
+        degraded_repo = MagicMock()
+        degraded_repo.add_vehicle = MagicMock()
+
+        FleetManager(stations=stations, vehicles=vehicles, degraded_repo=degraded_repo)
+
+        degraded_repo.add_vehicle.assert_called_once_with(303)
+        vehicle.mark_degraded.assert_called_once()
