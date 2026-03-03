@@ -29,7 +29,7 @@ class FleetManager:
         # helper data structure to track registered payment tokens for quick validation
         self._registered_tokens: set[str] = set()
         self._initialize_state()
-    
+
     #-----------------------------
     # initializer vehicle state normalization
     #-----------------------------
@@ -141,7 +141,7 @@ class FleetManager:
                        station.container_id)
                    )
         return nearest
-    
+
     # -----------------------------
     # Helper Functions
     # -----------------------------

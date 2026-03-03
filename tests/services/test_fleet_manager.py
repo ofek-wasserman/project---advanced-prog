@@ -23,7 +23,7 @@ class TestFleetManager:
         assert fm.stations is stations
         assert fm.vehicles is vehicles
         assert fm.users == {}
-    
+
     def test_initialize_state_eligible_vehicle_stays_in_station(self):
         station = MagicMock()
         station.remove_vehicle = MagicMock()
@@ -106,7 +106,7 @@ class TestFleetManager:
         assert fm.active_rides is active
         assert fm.degraded_repo is repo
         assert fm.billing_service is billing
-    
+
     def test_default_dependencies_are_not_shared_between_instances(self):
         stations = {1: MagicMock()}
         vehicles = {10: MagicMock()}
@@ -176,5 +176,5 @@ class TestFleetManager:
         fm = FleetManager(stations=stations, vehicles={})
 
         assert fm.nearest_station_with_available_vehicle((0.0, 0.0)) is None
-    
+
 
