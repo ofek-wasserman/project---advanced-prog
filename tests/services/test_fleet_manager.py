@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from src.domain.VehicleContainer import DegradedRepo
 from src.services.active_rides import ActiveRidesRegistry
 from src.services.billing import BillingService
@@ -50,6 +52,33 @@ class TestFleetManager:
         assert fm1.active_rides is not fm2.active_rides
         assert fm1.degraded_repo is not fm2.degraded_repo
         assert fm1.billing_service is not fm2.billing_service
+
+    def test_register_user_creates_and_stores_user_and_returns_id(self):
+        fm = FleetManager(stations={}, vehicles={})
+
+        user_id = fm.register_user("tok_test")
+
+        assert isinstance(user_id, int)
+        assert user_id in fm.users
+        assert fm.users[user_id].user_id == user_id
+        assert fm.users[user_id].payment_token == "tok_test"
+
+    def test_register_user_rejects_duplicate_payment_token(self):
+        fm = FleetManager(stations={}, vehicles={})
+        fm.register_user("tok_test")
+
+        with pytest.raises(ValueError):
+            fm.register_user("tok_test")
+
+    def test_invalid_payment_token_raises_error(self):
+        fm = FleetManager(stations={}, vehicles={})
+        with pytest.raises(ValueError):
+            fm.register_user("")
+        with pytest.raises(ValueError):
+            fm.register_user(None)
+        fm.register_user("test")
+        with pytest.raises(ValueError):
+            fm.register_user("test ")
 
     def test_initialize_state_eligible_vehicle_stays_in_station(self):
         station = MagicMock()

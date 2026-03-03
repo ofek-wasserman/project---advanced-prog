@@ -25,19 +25,33 @@ class FleetManager:
         )
         self.billing_service = billing_service or BillingService()
 
+        # helper data structure to track registered payment tokens for quick validation
+        self._registered_tokens: set[str] = set()
         self._initialize_state()
 
-    def register_user(self, payment_token: str) -> User:
+
+    def register_user(self, payment_token: str) -> int:
         """
         Registers a new user and generates a unique user_id.
         Args:
             payment_token (str): The payment token for the user.
         Returns:
-            User: The newly created User object.
+            int: The newly created user_id.
         Raises:
             ValueError: If the payment token is invalid or already exists.
         """
-        NotImplementedError("KAN-21: Implement FleetManager Class")
+        if not isinstance(payment_token, str):
+            raise ValueError("Invalid payment token provided.")
+
+        if payment_token.strip() in self._registered_tokens:
+            raise ValueError("Payment token already registered.")
+
+        new_user_id = max(self.users.keys(), default=0) + 1
+        new_user = User(user_id=new_user_id, payment_token=payment_token)
+        # Update both data structures to maintain state consistency
+        self.users[new_user_id] = new_user
+        self._registered_tokens.add(payment_token.strip())
+        return new_user_id
 
     def start_ride(self, user_id: int, location:tuple[float, float]) -> dict[str, any]:
         """
