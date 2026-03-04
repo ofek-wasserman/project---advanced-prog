@@ -17,7 +17,7 @@ class TestFleetManager:
     #-----------------------------
     def test_initial_state(self):
         stations = {1: MagicMock(), 2: MagicMock()}
-        vehicles = {10: MagicMock(), 11: MagicMock()}
+        vehicles = {"V101": MagicMock(), "V102": MagicMock()}
 
         fm = FleetManager(stations=stations, vehicles=vehicles)
 
@@ -36,7 +36,7 @@ class TestFleetManager:
         vehicle.station_id = 1
         vehicle.mark_degraded = MagicMock()
 
-        vehicles = {101: vehicle}
+        vehicles = {"V101": vehicle}
 
         degraded_repo = MagicMock()
         degraded_repo.add_vehicle = MagicMock()
@@ -58,16 +58,16 @@ class TestFleetManager:
         vehicle.station_id = 1
         vehicle.mark_degraded = MagicMock()
 
-        vehicles = {202: vehicle}
+        vehicles = {"V202": vehicle}
 
         degraded_repo = MagicMock()
         degraded_repo.add_vehicle = MagicMock()
 
         FleetManager(stations=stations, vehicles=vehicles, degraded_repo=degraded_repo)
 
-        degraded_repo.add_vehicle.assert_called_once_with(202)
+        degraded_repo.add_vehicle.assert_called_once_with("V202")
         vehicle.mark_degraded.assert_called_once()
-        station.remove_vehicle.assert_called_once_with(202)
+        station.remove_vehicle.assert_called_once_with("V202")
 
     def test_initialize_state_ineligible_vehicle_missing_station(self):
         # station_id points to a station that doesn't exist -> should not crash
@@ -78,19 +78,19 @@ class TestFleetManager:
         vehicle.station_id = 99
         vehicle.mark_degraded = MagicMock()
 
-        vehicles = {303: vehicle}
+        vehicles = {"V303": vehicle}
 
         degraded_repo = MagicMock()
         degraded_repo.add_vehicle = MagicMock()
 
         FleetManager(stations=stations, vehicles=vehicles, degraded_repo=degraded_repo)
 
-        degraded_repo.add_vehicle.assert_called_once_with(303)
+        degraded_repo.add_vehicle.assert_called_once_with("V303")
         vehicle.mark_degraded.assert_called_once()
 
     def test_uses_injected_dependencies(self):
         stations = {1: MagicMock()}
-        vehicles = {10: MagicMock()}
+        vehicles = {"V111": MagicMock()}
 
         active = ActiveRidesRegistry()
         repo = DegradedRepo(container_id=-1, _vehicle_ids=set(), name="Degraded Repo")
@@ -110,7 +110,7 @@ class TestFleetManager:
 
     def test_default_dependencies_are_not_shared_between_instances(self):
         stations = {1: MagicMock()}
-        vehicles = {10: MagicMock()}
+        vehicles = {"V111": MagicMock()}
 
         fm1 = FleetManager(stations=stations, vehicles=vehicles)
         fm2 = FleetManager(stations=stations, vehicles=vehicles)

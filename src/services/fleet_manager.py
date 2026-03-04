@@ -12,12 +12,12 @@ from src.services.billing import BillingService
 
 class FleetManager:
     def __init__(self,
-                 stations: dict[int, Station],
-                 vehicles: dict[int, Vehicle],
+                stations: dict[int, Station],
+                vehicles: dict[str, Vehicle],
                 active_rides: Optional[ActiveRidesRegistry] = None,
                 degraded_repo: Optional[DegradedRepo] = None,
                 billing_service: Optional[BillingService] = None,
-                 ):
+                ):
 
         self.users:dict[int,User] = {}
         self.stations = stations
