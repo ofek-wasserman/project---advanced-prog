@@ -11,6 +11,7 @@ def create_app() -> FastAPI:
         description="API for managing vehicle sharing services",
         version="1.0.0",
     )
+
     app.include_router(api_router)
 
     @app.exception_handler(RequestValidationError)
