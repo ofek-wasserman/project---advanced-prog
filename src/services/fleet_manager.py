@@ -34,23 +34,36 @@ class FleetManager:
     # initializer vehicle state normalization
     #-----------------------------
     def _initialize_state(self) -> None:
-        """Normalize loaded state: move ineligible vehicles to degraded repo."""
-        for vehicle_id, vehicle in self.vehicles.items():
-            if vehicle.is_eligible():
-                continue
+        """
+        Build a consistent runtime state from loaded CSV objects.
 
-            self.degraded_repo.add_vehicle(vehicle_id)
-            vehicle.mark_degraded()
+        - Stations are loaded empty (no vehicle inventory).
+        - Vehicles contain station_id.
+        - We create station inventories from vehicles, and immediately divert ineligible vehicles
+        (degraded / >10 rides) to the degraded repository.
+
+        Notes:
+        - If a vehicle references a station_id that doesn't exist in stations.csv, we fail fast.
+        - CSV should not include active rides.
+        """
+        for vehicle_id, vehicle in self.vehicles.items():
+            # Ineligible vehicles go straight to degraded repo (not docked at any station)
+            if not vehicle.is_eligible():
+                self.degraded_repo.add_vehicle(vehicle_id)
+                vehicle.mark_degraded()
+                vehicle.station_id = None
+                continue
 
             if vehicle.station_id is None:
-                continue
+                raise ValueError(f"Eligible vehicle {vehicle_id} has no station_id")
 
             station = self.stations.get(vehicle.station_id)
-            if station is not None:
-                station.remove_vehicle(vehicle_id)
+            if station is None:
+                raise ValueError(
+                    f"Vehicle {vehicle_id} references unknown station_id={vehicle.station_id}"
+                )
 
-            # degraded vehicles shouldn't be assigned to a station
-            vehicle.station_id = None
+            station.add_vehicle(vehicle_id)
 
     #-----------------------------
     # Public API

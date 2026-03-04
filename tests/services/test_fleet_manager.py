@@ -16,7 +16,7 @@ class TestFleetManager:
     #-----------------------------
     def test_initial_state(self):
         stations = {1: MagicMock(), 2: MagicMock()}
-        vehicles = {"V101": MagicMock(), "V102": MagicMock()}
+        vehicles = {}
 
         fm = FleetManager(stations=stations, vehicles=vehicles)
 
@@ -45,6 +45,8 @@ class TestFleetManager:
         degraded_repo.add_vehicle.assert_not_called()
         vehicle.mark_degraded.assert_not_called()
         station.remove_vehicle.assert_not_called()
+        station.add_vehicle.assert_called_once_with("V101")
+
 
     def test_initialize_state_ineligible_vehicle_moved_and_removed(self):
         station = MagicMock()
@@ -55,6 +57,7 @@ class TestFleetManager:
         vehicle = MagicMock()
         vehicle.is_eligible.return_value = False
         vehicle.station_id = 1
+        vehicle.active_ride_id = None
         vehicle.mark_degraded = MagicMock()
 
         vehicles = {"V202": vehicle}
@@ -66,7 +69,6 @@ class TestFleetManager:
 
         degraded_repo.add_vehicle.assert_called_once_with("V202")
         vehicle.mark_degraded.assert_called_once()
-        station.remove_vehicle.assert_called_once_with("V202")
 
     def test_initialize_state_ineligible_vehicle_missing_station(self):
         # station_id points to a station that doesn't exist -> should not crash
@@ -75,6 +77,7 @@ class TestFleetManager:
         vehicle = MagicMock()
         vehicle.is_eligible.return_value = False
         vehicle.station_id = 99
+        vehicle.active_ride_id = None
         vehicle.mark_degraded = MagicMock()
 
         vehicles = {"V303": vehicle}
@@ -89,7 +92,7 @@ class TestFleetManager:
 
     def test_uses_injected_dependencies(self):
         stations = {1: MagicMock()}
-        vehicles = {"V111": MagicMock()}
+        vehicles = {}
 
         active = ActiveRidesRegistry()
         repo = DegradedRepo(container_id=-1, _vehicle_ids=set(), name="Degraded Repo")
@@ -109,7 +112,7 @@ class TestFleetManager:
 
     def test_default_dependencies_are_not_shared_between_instances(self):
         stations = {1: MagicMock()}
-        vehicles = {"V111": MagicMock()}
+        vehicles = {}
 
         fm1 = FleetManager(stations=stations, vehicles=vehicles)
         fm2 = FleetManager(stations=stations, vehicles=vehicles)
