@@ -2,11 +2,9 @@
 
 from unittest.mock import MagicMock
 
-from src.domain.exceptions import ConflictError, InvalidInputError
-
-
 import pytest
 
+from src.domain.exceptions import ConflictError, InvalidInputError
 from src.domain.VehicleContainer import DegradedRepo
 from src.services.active_rides import ActiveRidesRegistry
 from src.services.billing import BillingService
