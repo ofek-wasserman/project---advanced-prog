@@ -16,7 +16,7 @@ class TestFleetManager:
     #-----------------------------
     def test_initial_state(self):
         stations = {1: MagicMock(), 2: MagicMock()}
-        vehicles = {"V101": MagicMock(), "V102": MagicMock()}
+        vehicles = {}
 
         fm = FleetManager(stations=stations, vehicles=vehicles)
 
@@ -33,6 +33,7 @@ class TestFleetManager:
         vehicle = MagicMock()
         vehicle.is_eligible.return_value = True
         vehicle.station_id = 1
+        vehicle.active_ride_id = None
         vehicle.mark_degraded = MagicMock()
 
         vehicles = {"V101": vehicle}
@@ -55,6 +56,7 @@ class TestFleetManager:
         vehicle = MagicMock()
         vehicle.is_eligible.return_value = False
         vehicle.station_id = 1
+        vehicle.active_ride_id = None
         vehicle.mark_degraded = MagicMock()
 
         vehicles = {"V202": vehicle}
@@ -75,6 +77,7 @@ class TestFleetManager:
         vehicle = MagicMock()
         vehicle.is_eligible.return_value = False
         vehicle.station_id = 99
+        vehicle.active_ride_id = None
         vehicle.mark_degraded = MagicMock()
 
         vehicles = {"V303": vehicle}
@@ -89,7 +92,7 @@ class TestFleetManager:
 
     def test_uses_injected_dependencies(self):
         stations = {1: MagicMock()}
-        vehicles = {"V111": MagicMock()}
+        vehicles = {}
 
         active = ActiveRidesRegistry()
         repo = DegradedRepo(container_id=-1, _vehicle_ids=set(), name="Degraded Repo")
@@ -109,7 +112,7 @@ class TestFleetManager:
 
     def test_default_dependencies_are_not_shared_between_instances(self):
         stations = {1: MagicMock()}
-        vehicles = {"V111": MagicMock()}
+        vehicles = {}
 
         fm1 = FleetManager(stations=stations, vehicles=vehicles)
         fm2 = FleetManager(stations=stations, vehicles=vehicles)
@@ -118,6 +121,21 @@ class TestFleetManager:
         assert fm1.active_rides is not fm2.active_rides
         assert fm1.degraded_repo is not fm2.degraded_repo
         assert fm1.billing_service is not fm2.billing_service
+
+    def test_initialize_state_raises_if_vehicle_has_active_ride_at_bootstrap(self):
+        vehicle = MagicMock()
+        vehicle.active_ride_id = 999
+        vehicle.is_eligible.return_value = False
+        vehicle.station_id = 1
+        vehicle.mark_degraded = MagicMock()
+
+        station = MagicMock()
+        stations = {1: station}
+        vehicles = {"V105": vehicle}
+
+        with pytest.raises(ValueError):
+            FleetManager(stations=stations, vehicles=vehicles)
+
     #-----------------------------
     # User Registration Tests
     #-----------------------------
@@ -138,15 +156,28 @@ class TestFleetManager:
         with pytest.raises(ValueError):
             fm.register_user("tok_test")
 
-    def test_invalid_payment_token_raises_error(self):
+    def test_register_user_rejects_blank_token(self):
         fm = FleetManager(stations={}, vehicles={})
         with pytest.raises(ValueError):
             fm.register_user("")
         with pytest.raises(ValueError):
-            fm.register_user(None)
-        fm.register_user("test")
+            fm.register_user("   ")
+
+    def test_register_user_rejects_whitespace_variant_duplicate(self):
+        fm = FleetManager(stations={}, vehicles={})
+        fm.register_user("tok")
         with pytest.raises(ValueError):
-            fm.register_user("test ")
+            fm.register_user(" tok ")
+
+    def test_register_user_stores_normalized_token(self):
+        fm = FleetManager(stations={}, vehicles={})
+        user_id = fm.register_user(" tok_test ")
+        assert fm.users[user_id].payment_token == "tok_test"
+
+    def test_register_user_rejects_non_string_token(self):
+        fm = FleetManager(stations={}, vehicles={})
+        with pytest.raises(ValueError):
+            fm.register_user(None)
 
     #-----------------------------
     # Nearest Station Tests

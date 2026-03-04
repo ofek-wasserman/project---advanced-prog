@@ -107,6 +107,21 @@ def test_bicycle_move_to_repo(available_bicycle):
     assert available_bicycle.active_ride_id is None
     assert available_bicycle.location == VehicleLocation.IN_REPO
 
+@pytest.mark.parametrize(
+    "cls, kwargs",
+    [
+        (Bicycle, dict(vehicle_id="B2", status=VehicleStatus.AVAILABLE, rides_since_last_treated=1,
+                      last_treated_date=date(2026, 1, 1), station_id=1, active_ride_id=999)),
+        (EBike, dict(vehicle_id="E2", status=VehicleStatus.AVAILABLE, rides_since_last_treated=1,
+                    last_treated_date=date(2026, 1, 1), station_id=1, active_ride_id=999, charge_pct=80)),
+        (Scooter, dict(vehicle_id="S2", status=VehicleStatus.AVAILABLE, rides_since_last_treated=1,
+                      last_treated_date=date(2026, 1, 1), station_id=1, active_ride_id=999, charge_pct=80)),
+    ],
+)
+def test_vehicle_not_eligible_when_active_ride_id_set(cls, kwargs):
+    v = cls(**kwargs)
+    assert v.is_eligible() is False
+
 # =========================
 # ELECTRIC VEHICLE (EBIKE) TESTS
 # =========================

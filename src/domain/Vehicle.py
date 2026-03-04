@@ -64,7 +64,7 @@ class Vehicle(ABC):
 
         Used by Service layer during deterministic vehicle selection.
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def can_initiate_treatment(self) -> bool:
@@ -73,7 +73,7 @@ class Vehicle(ABC):
 
         Subclasses define treatment policy (e.g., after X rides).
         """
-        pass
+        raise NotImplementedError
 
     def mark_degraded(self) -> None:
         """
@@ -191,6 +191,7 @@ class Bicycle(Vehicle):
         return (
             self.status == ve.VehicleStatus.AVAILABLE
             and self.rides_since_last_treated <= 10
+            and self.active_ride_id is None
         )
 
     def can_initiate_treatment(self) -> bool:
@@ -244,9 +245,10 @@ class ElectricVehicle(Vehicle):
         self.charge_pct = charge_pct
 
     def is_eligible(self) -> bool:
-        pass
+        raise NotImplementedError
+
     def can_initiate_treatment(self) -> bool:
-        pass
+        raise NotImplementedError
 
     def is_charged_enough(self) -> bool:
         """
@@ -320,6 +322,7 @@ class EBike(ElectricVehicle):
         return (
             self.status == ve.VehicleStatus.AVAILABLE
             and self.rides_since_last_treated <= 10
+            and self.active_ride_id is None
             and self.is_charged_enough()
         )
 
@@ -377,6 +380,7 @@ class Scooter(ElectricVehicle):
         return (
             self.status == ve.VehicleStatus.AVAILABLE
             and self.rides_since_last_treated <= 10
+            and self.active_ride_id is None
             and self.is_charged_enough()
         )
 

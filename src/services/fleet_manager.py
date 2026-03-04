@@ -34,14 +34,33 @@ class FleetManager:
     # initializer vehicle state normalization
     #-----------------------------
     def _initialize_state(self) -> None:
-        """Normalize loaded state: move ineligible vehicles to degraded repo."""
+        """Normalize loaded state after CSV bootstrap.
+
+        Assumption (Phase 1):
+        - CSV bootstrap must not contain active rides.
+        Therefore, active_ride_id must always be None at startup.
+
+        Goal:
+        - Regular stations contain only eligible/rentable vehicles.
+        - Unrentable vehicles are moved to the Degraded Repository and removed from stations.
+        """
         for vehicle_id, vehicle in self.vehicles.items():
+            # Phase 1 contract: no active rides at bootstrap
+            if vehicle.active_ride_id is not None:
+                raise ValueError(
+                    f"Invalid bootstrap state: vehicle {vehicle_id} "
+                    f"has active_ride_id={vehicle.active_ride_id}"
+                )
+
+            # If eligible, it may remain in a regular station (no changes needed)
             if vehicle.is_eligible():
                 continue
 
+            # Not eligible (and not in ride) -> must be unrentable, so move to degraded
             self.degraded_repo.add_vehicle(vehicle_id)
             vehicle.mark_degraded()
 
+            # Remove from station inventory if assigned
             if vehicle.station_id is None:
                 continue
 
@@ -49,7 +68,7 @@ class FleetManager:
             if station is not None:
                 station.remove_vehicle(vehicle_id)
 
-            # degraded vehicles shouldn't be assigned to a station
+            # Degraded vehicles shouldn't be assigned to a station
             vehicle.station_id = None
 
     #-----------------------------
@@ -68,14 +87,18 @@ class FleetManager:
         if not isinstance(payment_token, str):
             raise ValueError("Invalid payment token provided.")
 
-        if payment_token.strip() in self._registered_tokens:
+        token = payment_token.strip()
+        if not token:
+            raise ValueError("Invalid payment token provided.")
+
+        if token in self._registered_tokens:
             raise ValueError("Payment token already registered.")
 
         new_user_id = max(self.users.keys(), default=0) + 1
-        new_user = User(user_id=new_user_id, payment_token=payment_token)
+        new_user = User(user_id=new_user_id, payment_token=token)
         # Update both data structures to maintain state consistency
         self.users[new_user_id] = new_user
-        self._registered_tokens.add(payment_token.strip())
+        self._registered_tokens.add(token)
         return new_user_id
 
     def start_ride(self, user_id: int, location:tuple[float, float]) -> dict[str, any]:
@@ -95,7 +118,7 @@ class FleetManager:
             - store ride information in active rides registry
             - return ride object
         """
-        NotImplementedError("KAN-21: Implement FleetManager Class")
+        raise NotImplementedError("KAN-21: Implement FleetManager Class")
 
     def end_ride(self, ride_id: int, location:tuple[float, float]) -> dict[str, any]:
         """
@@ -115,7 +138,7 @@ class FleetManager:
              - if ride_since_last_treated > threshold, move vehicle to degraded repo
              - return location of the station where the ride ended
         """
-        NotImplementedError("KAN-21: Implement FleetManager Class")
+        raise NotImplementedError("KAN-21: Implement FleetManager Class")
 
     def nearest_station_with_available_vehicle(self,
                                                 location:tuple[float, float],
@@ -170,7 +193,7 @@ class FleetManager:
         """
         Generates a new unique ride ID. In a real implementation, this could be more robust.
         """
-        NotImplementedError("KAN-21: Implement FleetManager Class")
+        raise NotImplementedError("KAN-21: Implement FleetManager Class")
 
     def _nearest_station_with_free_slot(self,
                                         location:tuple[float, float],
@@ -182,7 +205,7 @@ class FleetManager:
         Returns:
             Station: The nearest station with a free slot.
         """
-        NotImplementedError("KAN-21: Implement FleetManager Class")
+        raise NotImplementedError("KAN-21: Implement FleetManager Class")
 
 
 
