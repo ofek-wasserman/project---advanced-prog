@@ -1,10 +1,7 @@
-from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 
 from src.api.exceptions_handler import register_exception_handlers
 from src.api.router import api_router
