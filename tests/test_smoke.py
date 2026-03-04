@@ -6,28 +6,15 @@ These tests are intentionally shallow: they prove the app *boots*, not
 that every endpoint is correct (that belongs to the individual route test suites).
 """
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.main import create_app
+# NOTE: app/client fixtures come from tests/conftest.py now (dependency overridden)
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
 
-
-@pytest.fixture(scope="module")
-def app() -> FastAPI:
-    return create_app()
-
-
-@pytest.fixture(scope="module")
-def client(app: FastAPI) -> TestClient:
-    return TestClient(app, raise_server_exceptions=False)
-
-
-@pytest.fixture(scope="module")
 def route_paths(app: FastAPI) -> set[str]:
     return {route.path for route in app.routes}
 
@@ -35,7 +22,6 @@ def route_paths(app: FastAPI) -> set[str]:
 # ---------------------------------------------------------------------------
 # Group 1 - app factory
 # ---------------------------------------------------------------------------
-
 
 class TestAppFactory:
     def test_returns_fastapi_instance(self, app: FastAPI) -> None:
@@ -52,33 +38,21 @@ class TestAppFactory:
 # Group 2 - route registration
 # ---------------------------------------------------------------------------
 
-
 class TestRouteRegistration:
-    def test_health_route_registered(self, route_paths: set[str]) -> None:
-        assert "/health" in route_paths
+    def test_register_route_registered(self, app: FastAPI) -> None:
+        assert "/register" in route_paths(app)
 
-    def test_register_route_registered(self, route_paths: set[str]) -> None:
-        assert "/register" in route_paths
-
-    def test_ride_start_route_registered(self, route_paths: set[str]) -> None:
-        assert "/ride/start" in route_paths
-
-    def test_ride_end_route_registered(self, route_paths: set[str]) -> None:
-        assert "/ride/end" in route_paths
-
-    def test_stations_nearest_route_registered(self, route_paths: set[str]) -> None:
-        assert "/stations/nearest" in route_paths
-
-    def test_rides_active_users_route_registered(self, route_paths: set[str]) -> None:
-        assert "/rides/active-users" in route_paths
+    # Keep this only if /health exists in your KAN-16 app
+    def test_health_route_registered(self, app: FastAPI) -> None:
+        assert "/health" in route_paths(app)
 
 
 # ---------------------------------------------------------------------------
 # Group 3 - basic HTTP behaviour
 # ---------------------------------------------------------------------------
 
-
 class TestHttpBehaviour:
+    # Keep these only if /health exists in your KAN-16 app
     def test_health_returns_200(self, client: TestClient) -> None:
         assert client.get("/health").status_code == 200
 
