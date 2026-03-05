@@ -13,6 +13,8 @@ from src.main import create_app
 def fleet_manager_mock() -> Mock:
     fm = Mock()
     fm.register_user.return_value = 1
+    fm.active_rides = Mock()
+    fm.active_rides.active_user_ids.return_value = []
     return fm
 
 

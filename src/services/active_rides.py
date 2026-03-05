@@ -60,3 +60,7 @@ class ActiveRidesRegistry:
     def active_ride_ids(self):
         """Get all active ride ids"""
         return list(self._active_rides.keys())
+
+    def active_user_ids(self) -> list[int]:
+        """Get all user ids currently in an active ride."""
+        return list(self._user_active_rides.keys())
