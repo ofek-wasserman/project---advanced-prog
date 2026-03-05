@@ -159,16 +159,54 @@ class FleetManager:
         returns:
             location (tuple[float, float]): The (latitude, longitude) where the ride ended.
             payment_info (dict): Information about the payment for the ride.
-        TODO:
-             - check if user has an active ride
-             - find nearest station with free slot
-             - update ride information in active rides registry
-             - end ride and calculate cost using billing service
-             - increase ride_since_last_treated for the vehicle
-             - if ride_since_last_treated > threshold, move vehicle to degraded repo
-             - return location of the station where the ride ended
         """
-        raise NotImplementedError("KAN-21: Implement FleetManager Class")
+        if not isinstance(location, tuple) or len(location) != 2:
+            raise InvalidInputError("Invalid location format. Expected Tuple[float, float].")
+        try:
+            ride = self.active_rides.get(ride_id)
+        except Exception as e:
+            raise NotFoundError("Ride does not exist.") from e
+
+        nearest_station = self._nearest_station_with_free_slot(location)
+        if nearest_station is None:
+            raise NotFoundError("No free slots found in any station")
+
+        end_time= datetime.datetime.now()
+
+        user = self.users.get(ride.user_id)
+        if user is None:
+            raise NotFoundError("User for this ride does not exist.")
+
+        #process payment
+        price = self.billing_service.calculate_price(start_time=ride.start_time,
+                                                            end_time=end_time,
+                                                            reported_degraded=False
+                                                            )
+        paid = self.billing_service.process_payment(user.payment_token, float(price))
+        if not paid:
+            raise ConflictError("Payment failed.")
+
+        #end ride
+        ride.end(
+            end_station_id=nearest_station.container_id,end_time=end_time)
+        self.active_rides.remove(ride_id)
+
+        #process vehicle end ride
+        vehicle = self.vehicles[ride.vehicle_id]
+        if vehicle is None:
+            raise NotFoundError("Vehicle for this ride does not exist.")
+
+        vehicle.add_ride_count()
+        if not vehicle.is_eligible():
+            #if not eligible then move to degraded repo
+            self.degraded_repo.add_vehicle(vehicle_id=vehicle.vehicle_id)
+            vehicle.move_to_repo()
+            vehicle.mark_degraded()
+
+        # doc to station
+        nearest_station.add_vehicle(vehicle.vehicle_id)
+        vehicle.dock_to_station(nearest_station.container_id)
+        return {"price":price, "location":(nearest_station.lat,nearest_station.lon)}
 
     def nearest_station_with_available_vehicle(self,
                                                 location:tuple[float, float],
@@ -234,7 +272,21 @@ class FleetManager:
         Returns:
             Station: The nearest station with a free slot.
         """
-        raise NotImplementedError("KAN-21: Implement FleetManager Class")
+        if not isinstance(location, tuple) or len(location) != 2:
+            raise InvalidInputError("Invalid location format. Expected Tuple[float, float].")
+
+        valid_stations = [station for station in self.stations.values() if
+                          station.has_free_slot()]
+        if not valid_stations:
+            return None
+
+        nearest = min(valid_stations,
+                      key=lambda station:
+                      (self._distance(location, (station.lat, station.lon)),
+                       station.container_id)
+                   )
+        return nearest
+
 
 
 
