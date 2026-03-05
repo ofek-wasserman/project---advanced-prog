@@ -34,13 +34,16 @@ async def start_ride(
     req: StartRideRequest,
     fleet_manager: FleetManager = Depends(get_fleet_manager),
 ) -> StartRideResponse:
-    ride = fleet_manager.start_ride(user_id=req.user_id, location=(req.lon, req.lat))
+    ride, start_station_id = fleet_manager.start_ride(
+        user_id=req.user_id,
+        location=(req.lat, req.lon),
+    )
 
     return StartRideResponse(
         ride_id=ride.ride_id,
         vehicle_id=ride.vehicle_id,
         vehicle_type=ride.vehicle_type,
-        start_station_id=ride.start_station_id,
+        start_station_id=start_station_id,
     )
 
 
