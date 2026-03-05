@@ -14,8 +14,9 @@ Note:
     in future development iterations.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from src.api.dependencies import get_fleet_manager
 from src.api.schemas.rides import (
     ActiveUsersResponse,
     EndRideRequest,
@@ -23,34 +24,28 @@ from src.api.schemas.rides import (
     StartRideRequest,
     StartRideResponse,
 )
+from src.services.fleet_manager import FleetManager
 
 router = APIRouter()
 
 
-@router.post("/ride/start", response_model=StartRideResponse)
-async def start_ride(_req: StartRideRequest) -> StartRideResponse:
-    """Start a new ride session.
+@router.post(
+    "/ride/start",
+    response_model=StartRideResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def start_ride(
+    req: StartRideRequest,
+    fleet_manager: FleetManager = Depends(get_fleet_manager),
+) -> StartRideResponse:
+    ride = fleet_manager.start_ride(user_id=req.user_id, lon=req.lon, lat=req.lat)
 
-    Initiates a new ride for a user, recording the start time and vehicle
-    information. The ride must be properly closed with an end_ride call to
-    complete the session.
-
-    Returns:
-        dict: Ride information including ride_id and timestamp.
-
-    Raises:
-        HTTPException: 501 Not Implemented - Feature not yet available.
-
-    Example:
-        >>> response = await start_ride()
-        # Returns 501 Not Implemented response
-
-    TODO:
-        - Implement ride initialization logic
-        - Add user authentication
-        - Validate vehicle availability
-    """
-    raise HTTPException(status_code=501, detail="Not implemented yet")
+    return StartRideResponse(
+        ride_id=ride.ride_id,
+        vehicle_id=ride.vehicle_id,
+        vehicle_type=ride.vehicle_type,
+        start_station_id=ride.start_station_id,
+    )
 
 
 @router.post("/ride/end", response_model=EndRideResponse)
