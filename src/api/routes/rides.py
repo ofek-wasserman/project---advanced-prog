@@ -39,7 +39,6 @@ from src.services.fleet_manager import FleetManager
 router = APIRouter()
 
 
-
 @router.post("/ride/start", response_model=StartRideResponse, status_code=status.HTTP_200_OK)
 async def start_ride(
     req: StartRideRequest,
@@ -66,15 +65,15 @@ async def end_ride(
     req: EndRideRequest,
     fleet_manager: FleetManager = Depends(get_fleet_manager),
 ) -> EndRideResponse:
-    _, payment_info = fleet_manager.end_ride(
+    end_station_id, payment_charged = fleet_manager.end_ride(
         ride_id=req.ride_id,
         location=(req.lat, req.lon),
     )
 
     return EndRideResponse(
         ride_id=req.ride_id,
-        end_station_id=payment_info["end_station_id"],
-        payment_charged=payment_info["payment_charged"],
+        end_station_id=end_station_id,
+        payment_charged=payment_charged,
     )
 
 
