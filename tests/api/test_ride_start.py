@@ -20,7 +20,7 @@ def test_ride_start_returns_200_and_payload(client, fleet_manager_mock: Mock) ->
         "start_station_id": 10,
     }
 
-    fleet_manager_mock.start_ride.assert_called_once_with(user_id=1, lon=34.8, lat=32.1)
+    fleet_manager_mock.start_ride.assert_called_once_with(user_id=1, location=(34.8, 32.1))
 
 
 def test_ride_start_maps_not_found_to_404(client, fleet_manager_mock: Mock) -> None:
