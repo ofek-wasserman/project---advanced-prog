@@ -1,66 +1,94 @@
+from typing import Optional
+
+from src.domain.exceptions import ConflictError, NotFoundError
+from src.domain.ride import Ride
+
+
 class ActiveRidesRegistry:
-    """Tracks active rides to prevent conflicts"""
+    """Tracks active rides and prevents conflicts (one active ride per user/vehicle)."""
 
-    def __init__(self):
-        self._active_rides = {}
-        self._user_active_rides = {}
-        self._vehicle_active_rides = {}
-        self._next_ride_id = 1
+    def __init__(self) -> None:
+        self.rides: dict[int, Ride] = {}
+        self.rides_by_user: dict[int, int] = {}
+        self.rides_by_vehicle: dict[str, int] = {}
 
-    def create_ride(self, user_id: int, vehicle_id: str, start_station_id: int):
-        """Create new ride and track it"""
-        ride_id = self._next_ride_id
-        self._next_ride_id += 1
+    def add(self, ride: Ride) -> None:
+        """
+        Add a ride to the registry.
+        arg: ride (Ride): The ride to add.
+        returns: None
+        """
+        if ride.ride_id in self.rides:
+            raise ConflictError(f"Ride ID {ride.ride_id} already exists in registry.")
+        if ride.user_id in self.rides_by_user:
+            raise ConflictError(f"User ID {ride.user_id} already has an active ride.")
+        if ride.vehicle_id in self.rides_by_vehicle:
+            raise ConflictError(f"Vehicle ID {ride.vehicle_id} is already in an active ride.")
 
-        ride = {
-            "ride_id": ride_id,
-            "user_id": user_id,
-            "vehicle_id": vehicle_id,
-            "start_station_id": start_station_id,
-            "end_station_id": None,
-            "start_time": None,
-            "end_time": None,
-            "price": None,
-            "reported_degraded": False,
-        }
+        self.rides[ride.ride_id] = ride
+        self.rides_by_user[ride.user_id] = ride.ride_id
+        self.rides_by_vehicle[ride.vehicle_id] = ride.ride_id
 
-        self._active_rides[ride_id] = ride
-        self._user_active_rides[user_id] = ride_id
-        self._vehicle_active_rides[vehicle_id] = ride_id
+    def remove(self, ride_id: int) -> Ride:
+        """
+        Remove a ride from the registry.
+        arg: ride_id (int): The ID of the ride to remove.
+        returns: Ride: The removed ride.
+        """
+        if ride_id not in self.rides:
+            raise NotFoundError(f"Ride ID {ride_id} not found in registry.")
 
-        return ride_id
-
-    def get_ride(self, ride_id: int):
-        """Get ride by id"""
-        return self._active_rides.get(ride_id)
-
-    def end_ride(self, ride_id: int):
-        """Remove ride from active tracking"""
-        ride = self._active_rides.pop(ride_id, None)
-        if ride:
-            self._user_active_rides.pop(ride["user_id"], None)
-            self._vehicle_active_rides.pop(ride["vehicle_id"], None)
+        ride = self.rides.pop(ride_id)
+        self.rides_by_user.pop(ride.user_id, None)
+        self.rides_by_vehicle.pop(ride.vehicle_id, None)
         return ride
 
-    def user_has_active_ride(self, user_id: int) -> bool:
-        """Check if user has active ride"""
-        return user_id in self._user_active_rides
+    def get(self, ride_id: int) -> Ride:
+        """
+        Get a ride by its ID.
+        arg: ride_id (int): The ID of the ride to retrieve.
+        returns: Ride: The retrieved ride.
+        """
+        if ride_id not in self.rides:
+            raise NotFoundError(f"Ride ID {ride_id} not found in registry.")
+        return self.rides[ride_id]
 
-    def vehicle_in_use(self, vehicle_id: str) -> bool:
-        """Check if vehicle is in use"""
-        return vehicle_id in self._vehicle_active_rides
+    def has_active_ride_for_user(self, user_id: int) -> bool:
+        """
+        Check if a user has an active ride.
+        arg: user_id (int): The ID of the user to check.
+        """
+        return user_id in self.rides_by_user
 
-    def get_user_active_ride(self, user_id: int):
-        """Get user's active ride"""
-        ride_id = self._user_active_rides.get(user_id)
-        if ride_id:
-            return self._active_rides.get(ride_id)
-        return None
+    def get_active_ride_for_user(self, user_id: int) -> Optional[Ride]:
+        """
+        Get the active ride for a user.
+        arg: user_id (int): The ID of the user to retrieve the ride for.
+        returns: Ride: The active ride for the user, or None if no active ride exists.
+        """
+        ride_id = self.rides_by_user.get(user_id)
+        if ride_id is None:
+            return None
+        return self.rides.get(ride_id)
 
-    def active_ride_ids(self):
-        """Get all active ride ids"""
-        return list(self._active_rides.keys())
+    def is_vehicle_in_ride(self, vehicle_id: str) -> bool:
+        """
+        Check if a vehicle is in an active ride.
+        arg: vehicle_id (str): The ID of the vehicle to check.
+        returns: bool: True if the vehicle is in an active ride, False otherwise.
+        """
+        return vehicle_id in self.rides_by_vehicle
 
-    def active_user_ids(self) -> list[int]:
-        """Get all user ids currently in an active ride."""
-        return list(self._user_active_rides.keys())
+    def active_user_ids(self) -> set[int]:
+        """
+        Get a set of all active user IDs.
+        returns: set[int]: A list of all active user IDs.
+        """
+        return set(self.rides_by_user.keys())
+
+    def active_ride_ids(self) -> set[int]:
+        """
+        Get a set of all active ride IDs.
+        returns: set[int]: A list of all active ride IDs.
+        """
+        return set(self.rides.keys())

@@ -1,45 +1,102 @@
-"""Tests for active rides registry"""
+"""Tests for active rides registry."""
 
+import datetime
+
+import pytest
+
+from src.domain.exceptions import ConflictError, NotFoundError
+from src.domain.ride import Ride
 from src.services.active_rides import ActiveRidesRegistry
 
 
-class TestActiveRides:
-
-    def test_create_ride(self):
+class TestActiveRidesRegistry:
+    def test_add_stores_ride_and_indexes(self):
         reg = ActiveRidesRegistry()
-        ride_id = reg.create_ride(user_id=1, vehicle_id="V001", start_station_id=10)
-        assert ride_id == 1
-        ride = reg.get_ride(ride_id)
-        assert ride["user_id"] == 1
-        assert ride["vehicle_id"] == "V001"
+        ride = Ride(
+            ride_id=1,
+            user_id=10,
+            vehicle_id="V001",
+            start_time=datetime.datetime(2026, 1, 1, 10, 0, 0),
+            start_station_id=7,
+        )
 
-    def test_user_has_active_ride(self):
-        reg = ActiveRidesRegistry()
-        reg.create_ride(user_id=1, vehicle_id="V001", start_station_id=10)
-        assert reg.user_has_active_ride(1) is True
-        assert reg.user_has_active_ride(2) is False
+        reg.add(ride)
 
-    def test_vehicle_in_use(self):
-        reg = ActiveRidesRegistry()
-        reg.create_ride(user_id=1, vehicle_id="V001", start_station_id=10)
-        assert reg.vehicle_in_use("V001") is True
-        assert reg.vehicle_in_use("V002") is False
+        assert reg.get(1) is ride
+        assert reg.has_active_ride_for_user(10) is True
+        assert reg.is_vehicle_in_ride("V001") is True
+        assert reg.get_active_ride_for_user(10) is ride
+        assert 10 in reg.active_user_ids()
+        assert 1 in reg.active_ride_ids()
+        assert isinstance(reg.active_user_ids(), set)
+        assert isinstance(reg.active_ride_ids(), set)
 
-    def test_end_ride_removes_tracking(self):
+    def test_add_rejects_duplicate_ride_id(self):
         reg = ActiveRidesRegistry()
-        ride_id = reg.create_ride(user_id=1, vehicle_id="V001", start_station_id=10)
-        reg.end_ride(ride_id)
-        assert reg.user_has_active_ride(1) is False
-        assert reg.vehicle_in_use("V001") is False
+        t = datetime.datetime(2026, 1, 1, 10, 0, 0)
 
-    def test_get_user_active_ride(self):
-        reg = ActiveRidesRegistry()
-        ride_id = reg.create_ride(user_id=1, vehicle_id="V001", start_station_id=10)
-        ride = reg.get_user_active_ride(1)
-        assert ride["ride_id"] == ride_id
+        ride1 = Ride(ride_id=1, user_id=10, vehicle_id="V001", start_time=t, start_station_id=7)
+        ride2 = Ride(ride_id=1, user_id=11, vehicle_id="V002", start_time=t, start_station_id=7)
 
-    def test_increment_ride_id(self):
+        reg.add(ride1)
+        with pytest.raises(ConflictError, match="Ride ID 1 already exists"):
+            reg.add(ride2)
+
+    def test_add_rejects_user_with_existing_active_ride(self):
         reg = ActiveRidesRegistry()
-        id1 = reg.create_ride(user_id=1, vehicle_id="V001", start_station_id=10)
-        id2 = reg.create_ride(user_id=2, vehicle_id="V002", start_station_id=10)
-        assert id2 == id1 + 1
+        t = datetime.datetime(2026, 1, 1, 10, 0, 0)
+
+        ride1 = Ride(ride_id=1, user_id=10, vehicle_id="V001", start_time=t, start_station_id=7)
+        ride2 = Ride(ride_id=2, user_id=10, vehicle_id="V002", start_time=t, start_station_id=7)
+
+        reg.add(ride1)
+        with pytest.raises(ConflictError, match="User ID 10 already has an active ride"):
+            reg.add(ride2)
+
+    def test_add_rejects_vehicle_already_in_active_ride(self):
+        reg = ActiveRidesRegistry()
+        t = datetime.datetime(2026, 1, 1, 10, 0, 0)
+
+        ride1 = Ride(ride_id=1, user_id=10, vehicle_id="V001", start_time=t, start_station_id=7)
+        ride2 = Ride(ride_id=2, user_id=11, vehicle_id="V001", start_time=t, start_station_id=7)
+
+        reg.add(ride1)
+        with pytest.raises(ConflictError, match="Vehicle ID V001 is already in an active ride"):
+            reg.add(ride2)
+
+    def test_remove_deletes_ride_and_clears_indexes(self):
+        reg = ActiveRidesRegistry()
+        ride = Ride(
+            ride_id=1,
+            user_id=10,
+            vehicle_id="V001",
+            start_time=datetime.datetime(2026, 1, 1, 10, 0, 0),
+            start_station_id=7,
+        )
+        reg.add(ride)
+
+        removed = reg.remove(1)
+
+        assert removed is ride
+        assert reg.has_active_ride_for_user(10) is False
+        assert reg.is_vehicle_in_ride("V001") is False
+        assert reg.get_active_ride_for_user(10) is None
+        assert 10 not in reg.active_user_ids()
+        assert 1 not in reg.active_ride_ids()
+
+        with pytest.raises(NotFoundError, match="Ride ID 1 not found"):
+            reg.get(1)
+
+    def test_get_missing_raises_NotFoundError(self):
+        reg = ActiveRidesRegistry()
+        with pytest.raises(NotFoundError, match="Ride ID 999 not found"):
+            reg.get(999)
+
+    def test_remove_missing_raises_NotFoundError(self):
+        reg = ActiveRidesRegistry()
+        with pytest.raises(NotFoundError, match="Ride ID 999 not found"):
+            reg.remove(999)
+
+    def test_get_active_ride_for_user_returns_none_when_missing(self):
+        reg = ActiveRidesRegistry()
+        assert reg.get_active_ride_for_user(123) is None
