@@ -81,4 +81,4 @@ async def end_ride(
 async def active_users(
     fleet_manager: FleetManager = Depends(get_fleet_manager),
 ) -> ActiveUsersResponse:
-    return ActiveUsersResponse(active_user_ids=fleet_manager.active_ride_user_ids())
+    return ActiveUsersResponse(active_user_ids=fleet_manager.active_user_ids())
