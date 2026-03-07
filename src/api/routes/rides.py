@@ -1,17 +1,27 @@
 """Ride Management Endpoints.
 
-This module provides endpoints for managing ride lifecycle events including
-starting new rides, ending active rides, and retrieving ride information.
-Ride operations interact with the ride service layer to persist and track
-vehicle utilization.
+API layer only: this module defines HTTP endpoints for the ride lifecycle.
+It does not contain business logic. It delegates all ride operations to the
+service layer (`FleetManager`), and relies on the application's global
+exception handlers to map domain/service exceptions to HTTP responses.
 
 Endpoints:
-    POST /start: Initiate a new ride session.
-    POST /{ride_id}/end: Complete an active ride session.
+    POST /ride/start
+        Start a new ride for a user at the provided (lat, lon).
 
-Note:
-    These endpoints are currently placeholders and will be fully implemented
-    in future development iterations.
+    POST /ride/end
+        End an active ride at the provided (lat, lon). The service layer selects
+        the nearest station with a free slot, docks the vehicle, and calculates
+        billing.
+
+    GET /rides/active-users
+        Placeholder (not implemented in Phase 1 tests unless required).
+
+Error mapping (via global exception handlers):
+    - InvalidInputError -> 400
+    - NotFoundError     -> 404
+    - ConflictError     -> 409
+
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -27,7 +37,6 @@ from src.api.schemas.rides import (
 from src.services.fleet_manager import FleetManager
 
 router = APIRouter()
-
 
 
 @router.post("/ride/start", response_model=StartRideResponse, status_code=status.HTTP_200_OK)
@@ -51,34 +60,21 @@ async def start_ride(
     )
 
 
-@router.post("/ride/end", response_model=EndRideResponse)
-async def end_ride(_req: EndRideRequest) -> EndRideResponse:
-    """Complete an active ride session.
+@router.post("/ride/end", response_model=EndRideResponse, status_code=status.HTTP_200_OK)
+async def end_ride(
+    req: EndRideRequest,
+    fleet_manager: FleetManager = Depends(get_fleet_manager),
+) -> EndRideResponse:
+    end_station_id, payment_charged = fleet_manager.end_ride(
+        ride_id=req.ride_id,
+        location=(req.lat, req.lon),
+    )
 
-    Ends an active ride session identified by its ride_id. Records the end time
-    and calculates the total duration. No new rides can be started for the same
-    ride_id after completion.
-
-    Args:
-        _req (EndRideRequest): The request object containing ride_id and location data.
-
-    Returns:
-        dict: Ride completion information including total duration and cost.
-
-    Raises:
-        HTTPException: 501 Not Implemented - Feature not yet available.
-        HTTPException: 404 Not Found - Ride with given ride_id does not exist.
-
-    Example:
-        >>> response = await end_ride(ride_id=42)
-        # Returns 501 Not Implemented response
-
-    TODO:
-        - Implement ride completion logic
-        - Calculate ride cost and duration
-        - Update vehicle location
-    """
-    raise HTTPException(status_code=501, detail="Not implemented yet")
+    return EndRideResponse(
+        ride_id=req.ride_id,
+        end_station_id=end_station_id,
+        payment_charged=payment_charged,
+    )
 
 
 @router.get("/rides/active-users", response_model=ActiveUsersResponse)
