@@ -218,6 +218,179 @@ class TestFleetManager:
 
         assert fm.nearest_station_with_available_vehicle((0.0, 0.0)) is None
 
+    #-----------------------------
+    # Ride start Tests
+    #-----------------------------
+    def test_start_ride_user_does_not_exist_raises(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {}
+
+        with pytest.raises(NotFoundError, match="User does not exist"):
+            fm.start_ride(user_id=1, location=(0.0, 0.0))
+
+    def test_start_ride_user_already_has_active_ride_raises(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock()}
+
+        # simulate active ride for user
+        fm.active_rides.rides_by_user[1] = 999
+
+        with pytest.raises(ConflictError, match="already has an active ride"):
+            fm.start_ride(user_id=1, location=(0.0, 0.0))
+
+    def test_start_ride_no_station_available_raises_conflict(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock()}
+
+        fm.nearest_station_with_available_vehicle = MagicMock(return_value=None)
+
+        with pytest.raises(ConflictError, match="No eligible vehicles"):
+            fm.start_ride(user_id=1, location=(0.0, 0.0))
+
+    def test_start_ride_happy_path_registers_ride_and_mutates_station_vehicle(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock()}
+
+        station = MagicMock()
+        station.lat = 10.0
+        station.lon = 20.0
+        station.container_id = 7
+        station.get_vehicle_ids.return_value = {"V010", "V011"}
+        station.remove_vehicle = MagicMock()
+
+        fm.nearest_station_with_available_vehicle = MagicMock(return_value=station)
+
+        v010 = MagicMock(rides_since_last_treated=5)
+        v010.checkout_to_ride = MagicMock()
+        v011 = MagicMock(rides_since_last_treated=1)
+        v011.checkout_to_ride = MagicMock()
+        fm.vehicles = {"V010": v010, "V011": v011}
+
+        fm._generate_ride_id = MagicMock(return_value=123)
+
+        ride, start_station_id = fm.start_ride(user_id=1, location=(0.0, 0.0))
+
+        assert start_station_id == 7
+        assert ride.ride_id == 123
+        assert ride.user_id == 1
+        assert ride.vehicle_id == "V011"
+        assert ride.start_station_id == 7
+        assert isinstance(ride.start_time, datetime.datetime)
+
+        station.remove_vehicle.assert_called_once_with("V011")
+        v011.checkout_to_ride.assert_called_once_with(ride_id=123)
+        v010.checkout_to_ride.assert_not_called()
+
+        assert fm.active_rides.get(123) is ride
+        assert fm.active_rides.has_active_ride_for_user(1) is True
+
+    def test_start_ride_when_registry_rejects_ride_raises_conflict_error(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock()}
+
+        station = MagicMock()
+        station.lat = 0.0
+        station.lon = 0.0
+        station.container_id = 1
+        station.get_vehicle_ids.return_value = {"V010"}
+        station.remove_vehicle = MagicMock()
+        fm.nearest_station_with_available_vehicle = MagicMock(return_value=station)
+
+        v010 = MagicMock(rides_since_last_treated=0)
+        v010.checkout_to_ride = MagicMock()
+        fm.vehicles = {"V010": v010}
+
+        fm._generate_ride_id = MagicMock(return_value=999)
+
+        # force registry conflict on ride_id
+        fm.active_rides.rides[999] = MagicMock()
+
+        with pytest.raises(ConflictError, match="Cannot start ride:"):
+            fm.start_ride(user_id=1, location=(0.0, 0.0))
+
+        # Since add() happens before removal/checkout, state should NOT mutate on failure
+        station.remove_vehicle.assert_not_called()
+        v010.checkout_to_ride.assert_not_called()
+
+    def test_start_ride_deterministic_vehicle_selection_tie_breaks_by_smallest_vehicle_id(self):
+        station = MagicMock()
+        station.container_id = 1
+        station.lat = 0.0
+        station.lon = 0.0
+        station.get_vehicle_ids.return_value = {"V010", "V011", "V012"}
+        station.remove_vehicle = MagicMock()
+        station.add_vehicle = MagicMock()  # for _initialize_state if needed
+
+        v010 = MagicMock(rides_since_last_treated=1, station_id=1, active_ride_id=None)
+        v010.is_eligible.return_value = True
+        v010.checkout_to_ride = MagicMock()
+
+        v011 = MagicMock(rides_since_last_treated=1, station_id=1, active_ride_id=None)
+        v011.is_eligible.return_value = True
+        v011.checkout_to_ride = MagicMock()
+
+        v012 = MagicMock(rides_since_last_treated=5, station_id=1, active_ride_id=None)
+        v012.is_eligible.return_value = True
+        v012.checkout_to_ride = MagicMock()
+
+        vehicles = {"V010": v010, "V011": v011, "V012": v012}
+        stations = {1: station}
+
+        fm = FleetManager(stations=stations, vehicles=vehicles, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock()}
+        fm.nearest_station_with_available_vehicle = MagicMock(return_value=station)
+        fm._generate_ride_id = MagicMock(return_value=99)
+
+        ride, start_station_id = fm.start_ride(user_id=1, location=(0.0, 0.0))
+
+        assert start_station_id == 1
+        assert ride.vehicle_id == "V010"  # tie on rides_since_last_treated -> smallest ID wins
+
+        station.remove_vehicle.assert_called_once_with("V010")
+        v010.checkout_to_ride.assert_called_once_with(ride_id=99)
+        v011.checkout_to_ride.assert_not_called()
+        v012.checkout_to_ride.assert_not_called()
+
+    def test_start_ride_updates_station_inventory_removes_selected_vehicle_only(self):
+        inventory = {"V010", "V011", "V012"}
+
+        station = MagicMock()
+        station.container_id = 1
+        station.lat = 0.0
+        station.lon = 0.0
+        station.get_vehicle_ids.side_effect = lambda: set(inventory)
+        station.add_vehicle = MagicMock()  # for _initialize_state if needed
+
+        def remove_vehicle(vid):
+            inventory.remove(vid)
+
+        station.remove_vehicle.side_effect = remove_vehicle
+
+        v010 = MagicMock(rides_since_last_treated=3, station_id=1, active_ride_id=None)
+        v010.is_eligible.return_value = True
+        v010.checkout_to_ride = MagicMock()
+
+        v011 = MagicMock(rides_since_last_treated=0, station_id=1, active_ride_id=None)
+        v011.is_eligible.return_value = True
+        v011.checkout_to_ride = MagicMock()
+
+        v012 = MagicMock(rides_since_last_treated=2, station_id=1, active_ride_id=None)
+        v012.is_eligible.return_value = True
+        v012.checkout_to_ride = MagicMock()
+
+        vehicles = {"V010": v010, "V011": v011, "V012": v012}
+        stations = {1: station}
+
+        fm = FleetManager(stations=stations, vehicles=vehicles, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock()}
+        fm.nearest_station_with_available_vehicle = MagicMock(return_value=station)
+        fm._generate_ride_id = MagicMock(return_value=100)
+
+        ride, _ = fm.start_ride(user_id=1, location=(0.0, 0.0))
+
+        assert ride.vehicle_id == "V011"
+        assert inventory == {"V010", "V012"}
+
     #--------------------
     # end ride tests
     #--------------------
