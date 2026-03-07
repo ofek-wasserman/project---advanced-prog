@@ -10,16 +10,15 @@ from src.services.billing import BillingService
 
 
 class FleetManager:
-    def __init__(
-        self,
-        stations: dict[int, Station],
-        vehicles: dict[str, Vehicle],
-        active_rides: Optional[ActiveRidesRegistry] = None,
-        degraded_repo: Optional[DegradedRepo] = None,
-        billing_service: Optional[BillingService] = None,
-    ):
+    def __init__(self,
+                stations: dict[int, Station],
+                vehicles: dict[str, Vehicle],
+                active_rides: Optional[ActiveRidesRegistry] = None,
+                degraded_repo: Optional[DegradedRepo] = None,
+                billing_service: Optional[BillingService] = None,
+                ):
 
-        self.users: dict[int, User] = {}
+        self.users:dict[int,User] = {}
         self.stations = stations
         self.vehicles = vehicles
         self.active_rides = active_rides or ActiveRidesRegistry()
@@ -32,9 +31,9 @@ class FleetManager:
         self._registered_tokens: set[str] = set()
         self._initialize_state()
 
-    # -----------------------------
+    #-----------------------------
     # initializer vehicle state normalization
-    # -----------------------------
+    #-----------------------------
     def _initialize_state(self) -> None:
         """Normalize loaded state after CSV bootstrap (Phase 1).
 
@@ -74,9 +73,9 @@ class FleetManager:
 
             station.add_vehicle(vehicle_id)
 
-    # -----------------------------
+    #-----------------------------
     # Public API
-    # -----------------------------
+    #-----------------------------
     def register_user(self, payment_token: str) -> int:
         """
         Registers a new user and generates a unique user_id.
@@ -101,7 +100,7 @@ class FleetManager:
         self._registered_tokens.add(token)
         return new_user_id
 
-    def start_ride(self, user_id: int, location: tuple[float, float]) -> dict[str, any]:
+    def start_ride(self, user_id: int, location:tuple[float, float]) -> dict[str, any]:
         """
         Start a ride for a user with a specific vehicle.
         Args:
@@ -120,11 +119,7 @@ class FleetManager:
         """
         raise NotImplementedError("KAN-21: Implement FleetManager Class")
 
-    def active_ride_user_ids(self) -> list[int]:
-        """Return user ids currently in an active ride."""
-        return self.active_rides.active_user_ids()
-
-    def end_ride(self, ride_id: int, location: tuple[float, float]) -> dict[str, any]:
+    def end_ride(self, ride_id: int, location:tuple[float, float]) -> dict[str, any]:
         """
         End a ride for a user with a specific vehicle.
         Args:
@@ -144,10 +139,9 @@ class FleetManager:
         """
         raise NotImplementedError("KAN-21: Implement FleetManager Class")
 
-    def nearest_station_with_available_vehicle(
-        self,
-        location: tuple[float, float],
-    ) -> Optional[Station]:
+    def nearest_station_with_available_vehicle(self,
+                                                location:tuple[float, float],
+                                                ) -> Optional[Station]:
         """
         Find the nearest station with at least one available vehicle.
         Args:
@@ -158,25 +152,22 @@ class FleetManager:
         if not isinstance(location, tuple) or len(location) != 2:
             raise InvalidInputError("Invalid location format. Expected Tuple[float, float].")
 
-        valid_stations = [
-            station for station in self.stations.values() if station.has_available_vehicle()
-        ]
+        valid_stations = [station for station in self.stations.values() if
+                          station.has_available_vehicle()]
         if not valid_stations:
             return None
 
-        nearest = min(
-            valid_stations,
-            key=lambda station: (
-                self._distance(location, (station.lat, station.lon)),
-                station.container_id,
-            ),
-        )
+        nearest = min(valid_stations,
+                      key=lambda station:
+                      (self._distance(location, (station.lat, station.lon)),
+                       station.container_id)
+                   )
         return nearest
 
     # -----------------------------
     # Helper Functions
     # -----------------------------
-    def _distance(self, loc1: tuple[float, float], loc2: tuple[float, float]) -> float:
+    def _distance(self, loc1:tuple[float, float], loc2:tuple[float, float]) -> float:
         """
         Calculate the distance between two locations.
         Args:
@@ -202,10 +193,9 @@ class FleetManager:
         """
         raise NotImplementedError("KAN-21: Implement FleetManager Class")
 
-    def _nearest_station_with_free_slot(
-        self,
-        location: tuple[float, float],
-    ) -> Optional[Station]:
+    def _nearest_station_with_free_slot(self,
+                                        location:tuple[float, float],
+                                        ) -> Optional[Station]:
         """
         Find the nearest station with a free slot for parking.
         Args:
@@ -214,3 +204,7 @@ class FleetManager:
             Station: The nearest station with a free slot.
         """
         raise NotImplementedError("KAN-21: Implement FleetManager Class")
+
+
+
+
