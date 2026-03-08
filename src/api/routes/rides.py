@@ -24,7 +24,7 @@ Error mapping (via global exception handlers):
 
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 from src.api.dependencies import get_fleet_manager
 from src.api.schemas.rides import (
@@ -78,13 +78,7 @@ async def end_ride(
 
 
 @router.get("/rides/active-users", response_model=ActiveUsersResponse)
-async def active_users() -> ActiveUsersResponse:
-    """Get list of active user IDs.
-
-    Returns:
-        ActiveUsersResponse: The list of active user IDs.
-
-    Raises:
-        HTTPException: 501 Not Implemented - Feature not yet available.
-    """
-    raise HTTPException(status_code=501, detail="Not implemented yet")
+async def active_users(
+    fleet_manager: FleetManager = Depends(get_fleet_manager),
+) -> ActiveUsersResponse:
+    return ActiveUsersResponse(active_user_ids=fleet_manager.active_user_ids())

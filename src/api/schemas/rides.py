@@ -9,8 +9,8 @@ class StartRideRequest(StrictBaseModel):
 
 class StartRideResponse(StrictBaseModel):
     ride_id: int
-    vehicle_id: str          # IMPORTANT: string per dataset
-    vehicle_type: str        # REQUIRED by spec
+    vehicle_id: str  # IMPORTANT: string per dataset
+    vehicle_type: str  # REQUIRED by spec
     start_station_id: int
 
 
@@ -23,8 +23,8 @@ class EndRideRequest(StrictBaseModel):
 class EndRideResponse(StrictBaseModel):
     ride_id: int
     end_station_id: int
-    payment_charged: int     # rename from payment_charged_ils
+    payment_charged: int  # rename from payment_charged_ils
 
 
 class ActiveUsersResponse(StrictBaseModel):
-    user_ids: list[int]
+    active_user_ids: list[int]

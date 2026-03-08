@@ -1,19 +1,27 @@
-from collections.abc import AsyncIterator
+from unittest.mock import Mock
 
-import pytest
-from httpx import ASGITransport, AsyncClient
-
-from src.main import app
+from fastapi.testclient import TestClient
 
 
-@pytest.fixture
-async def client() -> AsyncIterator[AsyncClient]:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-       yield ac
+def test_active_users_returns_empty_list(
+    client: TestClient,
+    fleet_manager_mock: Mock,
+) -> None:
+    fleet_manager_mock.active_user_ids.return_value = []
+
+    resp = client.get("/rides/active-users")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"active_user_ids": []}
 
 
-@pytest.mark.asyncio
-async def test_active_users_route_exists_returns_501(client: AsyncClient) -> None:
-    resp = await client.get("/rides/active-users")
-    assert resp.status_code == 501
+def test_active_users_returns_active_user_ids(
+    client: TestClient,
+    fleet_manager_mock: Mock,
+) -> None:
+    fleet_manager_mock.active_user_ids.return_value = [1, 2]
+
+    resp = client.get("/rides/active-users")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"active_user_ids": [1, 2]}
