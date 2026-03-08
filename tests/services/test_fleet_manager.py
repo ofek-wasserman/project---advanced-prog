@@ -418,7 +418,7 @@ class TestFleetManager:
 
         fm._nearest_station_with_free_slot = MagicMock(return_value=None)
 
-        with pytest.raises(ConflictError, match="All destination station full"):
+        with pytest.raises(ConflictError, match="No station with free slot available"):
             fm.end_ride(ride_id=1, location=(0.0, 0.0))
 
     def test_end_ride_user_missing_raises(self):
@@ -559,3 +559,15 @@ class TestFleetManager:
 
         assert station_id == 7
         assert price == 15.0
+
+    # -----------------------------
+    # Active Users Wrapper Tests
+    # -----------------------------
+    def test_active_user_ids_returns_sorted_active_users(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+
+        fm.active_rides.rides_by_user = {5: 100, 2: 101, 9: 102}
+
+        assert fm.active_user_ids() == [2, 5, 9]
+
+

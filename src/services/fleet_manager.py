@@ -167,7 +167,7 @@ class FleetManager:
 
         nearest_station = self._nearest_station_with_free_slot(location)
         if nearest_station is None:
-            raise ConflictError("All destination station full")
+            raise ConflictError("No station with free slot available")
 
         end_time= datetime.datetime.now()
 
@@ -230,6 +230,10 @@ class FleetManager:
                        station.container_id)
                    )
         return nearest
+
+
+    def active_user_ids(self) -> list[int]:
+        return sorted(self.active_rides.active_user_ids())
 
     # -----------------------------
     # Helper Functions
