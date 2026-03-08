@@ -559,3 +559,97 @@ class TestFleetManager:
 
         assert station_id == 7
         assert price == 15.0
+
+
+    #-----------------------------
+    # Full Ride Lifecycle Tests
+    #-----------------------------
+    def test_full_ride_lifecycle_register_start_end(self):
+        # --- Setup station inventory with real mutation ---
+        inventory = {"V010"}
+
+        station = MagicMock()
+        station.container_id = 7
+        station.lat = 1.0
+        station.lon = 2.0
+
+        # For start_ride
+        station.get_vehicle_ids.side_effect = lambda: set(inventory)
+        station.remove_vehicle.side_effect = lambda vid: inventory.remove(vid)
+
+        # For end_ride docking
+        station.add_vehicle.side_effect = lambda vid: inventory.add(vid)
+        station.has_free_slot.return_value = True
+
+        # --- Setup vehicles ---
+        v010 = MagicMock(vehicle_id="V010", rides_since_last_treated=0)
+        v010.checkout_to_ride = MagicMock()
+        v010.add_ride_count = MagicMock()
+        v010.is_eligible.return_value = True
+        v010.dock_to_station = MagicMock()
+        v010.move_to_repo = MagicMock()
+        v010.mark_degraded = MagicMock()
+
+        # --- FleetManager (avoid bootstrap coupling) ---
+        fm = FleetManager(stations={7: station}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.vehicles = {"V010": v010}
+
+        # Register user
+        user_id = fm.register_user("tok_test")
+
+        # Start ride
+        fm.nearest_station_with_available_vehicle = MagicMock(return_value=station)
+        fm._generate_ride_id = MagicMock(return_value=123)
+
+        ride, start_station_id = fm.start_ride(user_id=user_id, location=(0.0, 0.0))
+
+        assert start_station_id == 7
+        assert ride.ride_id == 123
+        assert ride.vehicle_id == "V010"
+        assert "V010" not in inventory  # removed from station
+        assert fm.active_rides.has_active_ride_for_user(user_id) is True
+
+        # End ride
+        fm._nearest_station_with_free_slot = MagicMock(return_value=station)
+        fm.billing_service = MagicMock()
+        fm.billing_service.calculate_price.return_value = 15.0
+        fm.billing_service.process_payment.return_value = True
+
+        end_station_id, price = fm.end_ride(ride_id=ride.ride_id, location=(9.0, 9.0))
+
+        assert end_station_id == 7
+        assert price == 15.0
+        assert "V010" in inventory  # returned to station
+        assert fm.active_rides.has_active_ride_for_user(user_id) is False
+
+        # Vehicle docked back
+        v010.add_ride_count.assert_called_once()
+        v010.dock_to_station.assert_called_once_with(7)
+
+    def test_initialize_state_does_not_add_ineligible_vehicle_to_station_inventory(self):
+        station = MagicMock()
+        station.add_vehicle = MagicMock()
+
+        eligible = MagicMock()
+        eligible.is_eligible.return_value = True
+        eligible.station_id = 1
+        eligible.active_ride_id = None
+
+        ineligible = MagicMock()
+        ineligible.is_eligible.return_value = False
+        ineligible.station_id = 1
+        ineligible.active_ride_id = None
+        ineligible.mark_degraded = MagicMock()
+
+        degraded_repo = MagicMock()
+        degraded_repo.add_vehicle = MagicMock()
+
+        FleetManager(
+            stations={1: station},
+            vehicles={"V_OK": eligible, "V_BAD": ineligible},
+            degraded_repo=degraded_repo,
+        )
+
+        station.add_vehicle.assert_called_once_with("V_OK")
+        degraded_repo.add_vehicle.assert_called_once_with("V_BAD")
+        ineligible.mark_degraded.assert_called_once()
