@@ -25,7 +25,7 @@ def test_phase1_user_flow():
             }
         )
 
-        assert register_response.status_code == 200
+        assert register_response.status_code == 201
 
         register_data = register_response.json()
         assert "user_id" in register_data

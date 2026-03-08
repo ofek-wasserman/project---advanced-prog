@@ -7,7 +7,7 @@ from src.services.fleet_manager import FleetManager
 router = APIRouter()
 
 
-@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_200_OK)
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(
     req: RegisterRequest,
     fleet_manager: FleetManager = Depends(get_fleet_manager),

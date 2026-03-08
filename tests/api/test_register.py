@@ -5,9 +5,9 @@ from starlette.testclient import TestClient
 from src.domain.exceptions import ConflictError
 
 
-def test_register_returns_200_and_user_id(client: TestClient, fleet_manager_mock: Mock) -> None:
+def test_register_returns_201_and_user_id(client: TestClient, fleet_manager_mock: Mock) -> None:
     resp = client.post("/register", json={"payment_token": "tok_123"})
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     body = resp.json()
     assert "user_id" in body
     assert isinstance(body["user_id"], int)
@@ -38,7 +38,7 @@ def test_register_duplicate_token_returns_409(client: TestClient, fleet_manager_
     fleet_manager_mock.register_user.side_effect = [1, ConflictError("Payment token already registered.")]
     try:
         r1 = client.post("/register", json={"payment_token": "dup"})
-        assert r1.status_code == 200
+        assert r1.status_code == 201
 
         r2 = client.post("/register", json={"payment_token": "dup"})
         assert r2.status_code == 409
