@@ -2,6 +2,7 @@ import datetime
 import math
 from typing import Optional
 
+from src.domain.enums import VehicleStatus
 from src.domain.exceptions import ConflictError, InvalidInputError, NotFoundError
 from src.domain.ride import Ride
 from src.domain.user import User
@@ -59,7 +60,8 @@ class FleetManager:
             # Not eligible -> move to degraded and detach from station
             if not vehicle.is_eligible():
                 self.degraded_repo.add_vehicle(vehicle_id)
-                vehicle.mark_degraded()
+                if vehicle.status != VehicleStatus.DEGRADED:
+                    vehicle.mark_degraded()
                 vehicle.station_id = None
                 continue
 
@@ -200,7 +202,8 @@ class FleetManager:
             #if not eligible then move to degraded repo
             self.degraded_repo.add_vehicle(vehicle_id=vehicle.vehicle_id)
             vehicle.move_to_repo()
-            vehicle.mark_degraded()
+            if vehicle.status != VehicleStatus.DEGRADED:
+                vehicle.mark_degraded()
 
         # doc to station
         nearest_station.add_vehicle(vehicle.vehicle_id)

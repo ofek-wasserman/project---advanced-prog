@@ -3,6 +3,7 @@ from datetime import date
 import pytest
 
 from src.domain.enums import VehicleLocation, VehicleStatus
+from src.domain.exceptions import ConflictError
 from src.domain.Vehicle import Bicycle, EBike, Scooter
 
 # =====================================================
@@ -110,6 +111,15 @@ def test_bicycle_move_to_repo(available_bicycle):
 def test_bicycle_not_eligible_when_active_ride_id_set(available_bicycle):
     available_bicycle.active_ride_id = 999
     assert available_bicycle.is_eligible() is False
+
+def test_mark_degraded_sets_status(available_bicycle):
+    available_bicycle.mark_degraded()
+    assert available_bicycle.status == VehicleStatus.DEGRADED
+
+def test_mark_degraded_twice_raises_conflict(available_bicycle):
+    available_bicycle.mark_degraded()
+    with pytest.raises(ConflictError):
+        available_bicycle.mark_degraded()
 
 
 # =========================

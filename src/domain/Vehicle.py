@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import date
 
 import src.domain.enums as ve
+from src.domain.exceptions import ConflictError
 
 
 class Vehicle(ABC):
@@ -81,7 +82,12 @@ class Vehicle(ABC):
 
         Used when business logic determines the vehicle
         is no longer fit for rides.
+
+        Raises:
+            ConflictError: If the vehicle is already degraded.
         """
+        if self.status == ve.VehicleStatus.DEGRADED:
+            raise ConflictError("Vehicle is already degraded.")
         self.status = ve.VehicleStatus.DEGRADED
 
     def apply_treatment(self, today: date) -> None:
