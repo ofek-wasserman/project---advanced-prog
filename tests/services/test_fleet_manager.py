@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from src.domain.enums import VehicleStatus
 from src.domain.exceptions import ConflictError, InvalidInputError, NotFoundError
 from src.domain.VehicleContainer import DegradedRepo
 from src.services.active_rides import ActiveRidesRegistry
@@ -71,6 +72,24 @@ class TestFleetManager:
 
         degraded_repo.add_vehicle.assert_called_once_with("V202")
         vehicle.mark_degraded.assert_called_once()
+
+    def test_initialize_state_already_degraded_vehicle_skips_mark_degraded(self):
+        """Regression: bootstrap must not call mark_degraded() on a vehicle
+        that is already DEGRADED — guarded path added in KAN-72."""
+        stations = {1: MagicMock()}
+
+        vehicle = MagicMock()
+        vehicle.is_eligible.return_value = False
+        vehicle.status = VehicleStatus.DEGRADED
+        vehicle.station_id = 1
+        vehicle.active_ride_id = None
+        vehicle.mark_degraded = MagicMock()
+
+        degraded_repo = MagicMock()
+        FleetManager(stations=stations, vehicles={"V999": vehicle}, degraded_repo=degraded_repo)
+
+        vehicle.mark_degraded.assert_not_called()
+        degraded_repo.add_vehicle.assert_called_once_with("V999")
 
     def test_initialize_state_ineligible_vehicle_missing_station(self):
         # station_id points to a station that doesn't exist -> should not crash
@@ -559,6 +578,43 @@ class TestFleetManager:
 
         assert station_id == 7
         assert price == 15.0
+
+    def test_end_ride_already_degraded_vehicle_skips_mark_degraded(self):
+        """Regression: end_ride must not call mark_degraded() on a vehicle
+        that is already DEGRADED — guarded path added in KAN-72."""
+        fm = FleetManager(stations={}, vehicles={})
+
+        ride = MagicMock(user_id=1, vehicle_id="V011", start_time=datetime.datetime(2026, 1, 1, 10, 0))
+        ride.end = MagicMock()
+
+        fm.active_rides = MagicMock()
+        fm.active_rides.get.return_value = ride
+        fm.active_rides.remove = MagicMock()
+
+        station = MagicMock(container_id=8, lat=1.0, lon=2.0)
+        station.add_vehicle = MagicMock()
+        fm._nearest_station_with_free_slot = MagicMock(return_value=station)
+
+        fm.users = {1: MagicMock(payment_token="tok_test")}
+        fm.billing_service = MagicMock()
+        fm.billing_service.calculate_price.return_value = 15.0
+        fm.billing_service.process_payment.return_value = True
+
+        fm.degraded_repo = MagicMock()
+
+        vehicle = MagicMock(vehicle_id="V011")
+        vehicle.status = VehicleStatus.DEGRADED  # already degraded
+        vehicle.is_eligible.return_value = False
+        vehicle.add_ride_count = MagicMock()
+        vehicle.move_to_repo = MagicMock()
+        vehicle.mark_degraded = MagicMock()
+        vehicle.dock_to_station = MagicMock()
+        fm.vehicles = {"V011": vehicle}
+
+        fm.end_ride(ride_id=99, location=(9.0, 9.0))
+
+        vehicle.mark_degraded.assert_not_called()
+        fm.degraded_repo.add_vehicle.assert_called_once_with(vehicle_id="V011")
 
     # -----------------------------
     # Active Users Wrapper Tests
