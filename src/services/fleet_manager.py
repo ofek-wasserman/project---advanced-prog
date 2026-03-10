@@ -179,7 +179,7 @@ class FleetManager:
         #process payment
         price = self.billing_service.calculate_price(start_time=ride.start_time,
                                                             end_time=end_time,
-                                                            reported_degraded=False
+                                                            reported_degraded=ride.reported_degraded
                                                             )
         paid = self.billing_service.process_payment(user.payment_token, float(price))
         if not paid:

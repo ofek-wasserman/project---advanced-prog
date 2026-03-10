@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
+from src.domain.exceptions import ConflictError, InvalidInputError
 from src.domain.ride import Ride
 
 
@@ -30,7 +31,7 @@ def test_ride_creation_valid(create_valid_ride):
 
 
 def test_ride_id_must_be_positive():
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidInputError):
         Ride(
             ride_id=0,
             user_id=1,
@@ -41,7 +42,7 @@ def test_ride_id_must_be_positive():
 
 
 def test_user_id_must_be_positive():
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidInputError):
         Ride(
             ride_id=1,
             user_id=0,
@@ -52,7 +53,7 @@ def test_user_id_must_be_positive():
 
 
 def test_vehicle_id_must_not_be_empty():
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidInputError):
         Ride(
             ride_id=1,
             user_id=1,
@@ -63,7 +64,7 @@ def test_vehicle_id_must_not_be_empty():
 
 
 def test_start_station_must_be_positive():
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidInputError):
         Ride(
             ride_id=1,
             user_id=1,
@@ -109,20 +110,20 @@ def test_end_sets_duration_correctly(create_valid_ride):
 def test_cannot_end_twice(create_valid_ride):
     create_valid_ride.end(end_station_id=3, end_time=datetime(2026, 1, 1, 12, 5, 0))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ConflictError):
         create_valid_ride.end(end_station_id=4, end_time=datetime(2026, 1, 1, 12, 10, 0))
 
 
 def test_end_station_must_be_positive(create_valid_ride):
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidInputError):
         create_valid_ride.end(end_station_id=0, end_time=datetime(2026, 1, 1, 12, 10, 0))
 
 
 def test_end_time_must_be_after_start(create_valid_ride):
-    with pytest.raises(ValueError):
+    with pytest.raises(ConflictError):
         create_valid_ride.end(end_station_id=3, end_time=datetime(2026, 1, 1, 12, 0, 0))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ConflictError):
         create_valid_ride.end(end_station_id=3, end_time=create_valid_ride.start_time - timedelta(seconds=1))
 
 
@@ -131,7 +132,7 @@ def test_end_time_must_be_after_start(create_valid_ride):
 # --------------------------
 
 def test_duration_raises_if_active(create_valid_ride):
-    with pytest.raises(ValueError):
+    with pytest.raises(ConflictError):
         create_valid_ride.duration_seconds()
 
 
@@ -152,9 +153,10 @@ def test_report_degraded_sets_flag(create_valid_ride):
     assert create_valid_ride.reported_degraded is True
 
 
-def test_report_degraded_can_be_called_multiple_times(create_valid_ride):
+def test_report_degraded_cant_be_called_multiple_times(create_valid_ride):
     create_valid_ride.report_degraded()
-    create_valid_ride.report_degraded()
+    with pytest.raises(ConflictError):
+        create_valid_ride.report_degraded()
 
     assert create_valid_ride.reported_degraded is True
 

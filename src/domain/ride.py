@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
+from src.domain.exceptions import ConflictError, InvalidInputError
+
 
 @dataclass
 class Ride:
@@ -27,20 +29,20 @@ class Ride:
     end_time: Optional[datetime] = None
     end_station_id: Optional[int] = None
     reported_degraded: bool = False
-    price: Optional[int] = None
+    price: Optional[float] = None
 
     def __post_init__(self) -> None:
         if self.ride_id <= 0:
-            raise ValueError("ride_id must be positive")
+            raise InvalidInputError("ride_id must be positive")
 
         if self.user_id <= 0:
-            raise ValueError("user_id must be positive")
+            raise InvalidInputError("user_id must be positive")
 
         if not self.vehicle_id:
-            raise ValueError("vehicle_id must be non-empty")
+            raise InvalidInputError("vehicle_id must be non-empty")
 
         if self.start_station_id <= 0:
-            raise ValueError("start_station_id must be positive")
+            raise InvalidInputError("start_station_id must be positive")
 
     # -------------------------
     # State Queries
@@ -53,7 +55,7 @@ class Ride:
     def duration_seconds(self) -> int:
         """Return ride duration in seconds. Only valid if ride ended."""
         if self.is_active():
-            raise ValueError("Cannot compute duration of active ride")
+            raise ConflictError("Cannot compute duration of active ride")
 
         return int((self.end_time - self.start_time).total_seconds())
 
@@ -72,13 +74,13 @@ class Ride:
         """
 
         if not self.is_active():
-            raise ValueError("Ride already ended")
+            raise ConflictError("Ride already ended")
 
         if end_station_id <= 0:
-            raise ValueError("end_station_id must be positive")
+            raise InvalidInputError("end_station_id must be positive")
 
         if end_time <= self.start_time:
-            raise ValueError("end_time must be after start_time")
+            raise ConflictError("end_time must be after start_time")
 
         self.end_station_id = end_station_id
         self.end_time = end_time
@@ -86,4 +88,6 @@ class Ride:
 
     def report_degraded(self) -> None:
         """Mark ride as degraded."""
+        if self.reported_degraded:
+            raise ConflictError("Ride already reported degraded")
         self.reported_degraded = True
