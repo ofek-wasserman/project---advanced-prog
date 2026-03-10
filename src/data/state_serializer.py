@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from src.domain.ride import Ride
-    from src.domain.Vehicle import Vehicle
     from src.services.fleet_manager import FleetManager
 
 SCHEMA_VERSION = 1

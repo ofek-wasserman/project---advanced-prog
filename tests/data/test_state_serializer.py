@@ -1,20 +1,16 @@
 """Tests for KAN-87 – state_serializer.save_state."""
 
 import json
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from pathlib import Path
 
-import pytest
-
 from src.data.state_serializer import SCHEMA_VERSION, save_state
-from src.domain.Vehicle import Bicycle, EBike, Scooter
-from src.domain.VehicleContainer import DegradedRepo, Station
 from src.domain.enums import VehicleStatus
 from src.domain.ride import Ride
-from src.domain.user import User
+from src.domain.Vehicle import Bicycle, EBike, Scooter
+from src.domain.VehicleContainer import DegradedRepo, Station
 from src.services.active_rides import ActiveRidesRegistry
 from src.services.fleet_manager import FleetManager
-
 
 # ---------------------------------------------------------------------------
 # Helpers
