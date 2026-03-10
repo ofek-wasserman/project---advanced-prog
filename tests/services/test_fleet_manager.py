@@ -75,7 +75,7 @@ class TestFleetManager:
 
     def test_initialize_state_already_degraded_vehicle_skips_mark_degraded(self):
         """Regression: bootstrap must not call mark_degraded() on a vehicle
-        that is already DEGRADED — guarded path added in KAN-72."""
+        that is already DEGRADED."""
         stations = {1: MagicMock()}
 
         vehicle = MagicMock()
@@ -581,7 +581,7 @@ class TestFleetManager:
 
     def test_end_ride_already_degraded_vehicle_skips_mark_degraded(self):
         """Regression: end_ride must not call mark_degraded() on a vehicle
-        that is already DEGRADED — guarded path added in KAN-72."""
+        that is already DEGRADED."""
         fm = FleetManager(stations={}, vehicles={})
 
         ride = MagicMock(user_id=1, vehicle_id="V011", start_time=datetime.datetime(2026, 1, 1, 10, 0))
