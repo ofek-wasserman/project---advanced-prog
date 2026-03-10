@@ -25,6 +25,7 @@ class FleetManager:
         self.stations = stations
         self.vehicles = vehicles
         self.active_rides = active_rides or ActiveRidesRegistry()
+        self.completed_rides: dict[int, Ride] = {}
         self.degraded_repo = degraded_repo or DegradedRepo(
             container_id=-1, _vehicle_ids=set(), name="Degraded Repo"
         )
@@ -190,7 +191,9 @@ class FleetManager:
         #end ride
         ride.end(
             end_station_id=nearest_station.container_id,end_time=end_time)
+        ride.price = price
         self.active_rides.remove(ride_id)
+        self.completed_rides[ride_id] = ride
 
         #process vehicle end ride
         vehicle = self.vehicles[ride.vehicle_id]

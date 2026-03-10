@@ -163,6 +163,8 @@ class Bicycle(Vehicle):
     - Treatment can start after 7 rides or if degraded
     """
 
+    VEHICLE_TYPE = "bicycle"
+
     def __init__(
         self,
         vehicle_id: str,
@@ -295,6 +297,8 @@ class EBike(ElectricVehicle):
     Exists for type distinction and future extensibility.
     """
 
+    VEHICLE_TYPE = "electric_bicycle"
+
     def __init__(
         self,
         vehicle_id: str,
@@ -352,6 +356,8 @@ class Scooter(ElectricVehicle):
     Defined separately for domain clarity and
     potential future rule differentiation.
     """
+
+    VEHICLE_TYPE = "scooter"
 
     def __init__(
         self,
