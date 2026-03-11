@@ -172,7 +172,7 @@ class FleetManager:
             raise ConflictError("No station with free slot available")
 
         # define end_time after start_time
-        end_time= datetime.datetime.now() + datetime.timedelta(microseconds=1)
+        end_time= datetime.datetime.now()
 
         user = self.users.get(ride.user_id)
         if user is None:
@@ -193,21 +193,23 @@ class FleetManager:
         self.active_rides.remove(ride_id)
 
         #process vehicle end ride
-        vehicle = self.vehicles[ride.vehicle_id]
+        vehicle = self.vehicles.get(ride.vehicle_id)
         if vehicle is None:
             raise NotFoundError("Vehicle for this ride does not exist.")
 
         vehicle.add_ride_count()
         if not vehicle.is_eligible():
-            #if not eligible then move to degraded repo
+            # degraded -> mark degraded
             self.degraded_repo.add_vehicle(vehicle_id=vehicle.vehicle_id)
             vehicle.move_to_repo()
             if vehicle.status != VehicleStatus.DEGRADED:
                 vehicle.mark_degraded()
+        else:
+            # eligible -> doc to station
+            nearest_station.add_vehicle(vehicle.vehicle_id)
+            vehicle.dock_to_station(nearest_station.container_id)
 
-        # doc to station
-        nearest_station.add_vehicle(vehicle.vehicle_id)
-        vehicle.dock_to_station(nearest_station.container_id)
+        # return end ride station and price
         return nearest_station.container_id, price
 
     def nearest_station_with_available_vehicle(self,
@@ -234,7 +236,6 @@ class FleetManager:
                        station.container_id)
                    )
         return nearest
-
 
     def active_user_ids(self) -> list[int]:
         return sorted(self.active_rides.active_user_ids())
