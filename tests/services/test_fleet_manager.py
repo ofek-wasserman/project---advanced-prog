@@ -538,6 +538,7 @@ class TestFleetManager:
             vehicle_id="V010",
             start_time=datetime.datetime(2026, 1, 1, 10, 0),
         )
+        ride.reported_degraded = False
         ride.end = MagicMock()
 
         fm.active_rides = MagicMock()
@@ -556,12 +557,12 @@ class TestFleetManager:
         fm.billing_service.process_payment.return_value = True
 
         fm.degraded_repo = MagicMock()
-        fm.degraded_repo.container_id = -1
         fm.degraded_repo.add_vehicle = MagicMock()
 
         vehicle = MagicMock(vehicle_id="V010")
+        vehicle.status = "OK"  # not already degraded, so mark_degraded should be called
         vehicle.add_ride_count = MagicMock()
-        vehicle.is_eligible.return_value = False  # becomes ineligible
+        vehicle.is_eligible.return_value = False
         vehicle.move_to_repo = MagicMock()
         vehicle.mark_degraded = MagicMock()
         vehicle.dock_to_station = MagicMock()
@@ -574,11 +575,12 @@ class TestFleetManager:
         vehicle.move_to_repo.assert_called_once()
         vehicle.mark_degraded.assert_called_once()
 
-        # NEW invariant: ineligible vehicle is not docked to station
+        # Ineligible vehicle is NOT docked and NOT added to station inventory
         station.add_vehicle.assert_not_called()
         vehicle.dock_to_station.assert_not_called()
 
-        assert station_id == fm.degraded_repo.container_id
+        # New behavior: returns nearest station id even when moved to degraded repo
+        assert station_id == 7
         assert price == 15.0
 
     def test_end_ride_already_degraded_vehicle_skips_mark_degraded(self):
