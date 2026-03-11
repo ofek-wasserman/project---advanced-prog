@@ -724,3 +724,133 @@ class TestFleetManager:
         station.add_vehicle.assert_called_once_with("V_OK")
         degraded_repo.add_vehicle.assert_called_once_with("V_BAD")
         ineligible.mark_degraded.assert_called_once()
+    # -----------------------------
+    # apply_treatment tests (Phase 2 /vehicle/treat)
+    # -----------------------------
+
+    def test_apply_treatment_treats_only_threshold_eligible_vehicles(self):
+        fm = FleetManager(stations={}, vehicles={})
+
+        v1 = MagicMock()
+        v1.can_initiate_treatment.return_value = True
+        v1.apply_treatment = MagicMock()
+
+        v2 = MagicMock()
+        v2.can_initiate_treatment.return_value = False
+        v2.apply_treatment = MagicMock()
+
+        fm.vehicles = {"V010": v1, "V011": v2}
+
+        fm.degraded_repo = MagicMock()
+        fm.degraded_repo.get_vehicle_ids.return_value = set()
+
+        treated = fm.apply_treatment(location=(0.0, 0.0))
+
+        assert treated == ["V010"]
+        v1.apply_treatment.assert_called_once()
+        v2.apply_treatment.assert_not_called()
+
+
+    def test_apply_treatment_degraded_vehicle_removed_from_repo_and_docked_to_station(self):
+        fm = FleetManager(stations={}, vehicles={})
+
+        # No threshold-eligible vehicles
+        v_ok = MagicMock()
+        v_ok.can_initiate_treatment.return_value = False
+        fm.vehicles = {"V010": v_ok}
+
+        # Degraded vehicle
+        v_deg = MagicMock()
+        v_deg.can_initiate_treatment.return_value = False
+        v_deg.apply_treatment = MagicMock()
+        v_deg.dock_to_station = MagicMock()
+        fm.vehicles["V999"] = v_deg
+
+        # Degraded repo contains V999
+        fm.degraded_repo = MagicMock()
+        fm.degraded_repo.get_vehicle_ids.return_value = {"V999"}
+        fm.degraded_repo.remove_vehicle = MagicMock()
+
+        # Nearest station with free slot
+        station = MagicMock(container_id=7, lat=1.0, lon=2.0)
+        station.add_vehicle = MagicMock()
+        fm._nearest_station_with_free_slot = MagicMock(return_value=station)
+
+        treated = fm.apply_treatment(location=(9.0, 9.0))
+
+        # Treated includes degraded vehicle id
+        assert "V999" in treated
+
+        # Order invariant: remove from repo before station add
+        calls = []
+
+        fm.degraded_repo.remove_vehicle.side_effect = lambda vid: calls.append(("repo_remove", vid))
+        station.add_vehicle.side_effect = lambda vid: calls.append(("station_add", vid))
+
+        fm.apply_treatment(location=(9.0, 9.0))
+
+        assert calls[0] == ("repo_remove", "V999")
+        assert calls[1] == ("station_add", "V999")
+
+        # Docking happens and uses station.container_id
+        v_deg.dock_to_station.assert_called_with(7)
+
+
+    def test_apply_treatment_degraded_vehicle_no_station_free_slot_raises_conflict(self):
+        fm = FleetManager(stations={}, vehicles={})
+
+        v_deg = MagicMock()
+        v_deg.can_initiate_treatment.return_value = False
+        v_deg.apply_treatment = MagicMock()
+        v_deg.dock_to_station = MagicMock()
+        fm.vehicles = {"V999": v_deg}
+
+        fm.degraded_repo = MagicMock()
+        fm.degraded_repo.get_vehicle_ids.return_value = {"V999"}
+        fm.degraded_repo.remove_vehicle = MagicMock()
+
+        fm._nearest_station_with_free_slot = MagicMock(return_value=None)
+
+        with pytest.raises(ConflictError, match="No station with free slot available"):
+            fm.apply_treatment(location=(0.0, 0.0))
+
+        # Should not remove from repo or dock if no station available
+        fm.degraded_repo.remove_vehicle.assert_not_called()
+        v_deg.dock_to_station.assert_not_called()
+
+
+    def test_apply_treatment_does_not_leave_degraded_vehicle_in_repo_and_station(self):
+        """
+        Invariant: after treatment, treated degraded vehicle is not in degraded repo and is docked to a station.
+        """
+        fm = FleetManager(stations={}, vehicles={})
+
+        # Track repo membership with a real set
+        repo_ids = {"V999"}
+
+        def get_ids():
+            return set(repo_ids)
+
+        def remove_vid(vid):
+            repo_ids.remove(vid)
+
+        fm.degraded_repo = MagicMock()
+        fm.degraded_repo.get_vehicle_ids.side_effect = get_ids
+        fm.degraded_repo.remove_vehicle.side_effect = remove_vid
+
+        # Vehicle
+        v_deg = MagicMock()
+        v_deg.can_initiate_treatment.return_value = False
+        v_deg.apply_treatment = MagicMock()
+        v_deg.dock_to_station = MagicMock()
+        fm.vehicles = {"V999": v_deg}
+
+        station = MagicMock(container_id=3)
+        station.add_vehicle = MagicMock()
+        fm._nearest_station_with_free_slot = MagicMock(return_value=station)
+
+        fm.apply_treatment(location=(0.0, 0.0))
+
+        assert "V999" not in repo_ids
+        station.add_vehicle.assert_called_once_with("V999")
+        v_deg.dock_to_station.assert_called_once_with(3)

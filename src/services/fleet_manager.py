@@ -240,6 +240,37 @@ class FleetManager:
     def active_user_ids(self) -> list[int]:
         return sorted(self.active_rides.active_user_ids())
 
+    def apply_treatment(self, location:tuple[float, float]) -> list[str]:
+        """
+        Run maintenance on all treatable vehicles
+        Arg:
+            location (tuple[float, float]): The (latitude, longitude) of the user.
+        Return:
+                vehicle IDs list of treated vehicles
+        """
+        treated: list[str] = []
+        # for eligible vehicles
+        for vehicle_id, vehicle in self.vehicles.items():
+                if vehicle.can_initiate_treatment():
+                    vehicle.apply_treatment()
+                    treated.append(vehicle_id)
+
+        # for degraded vehicles
+        degraded_vehicles = self.degraded_repo.get_vehicle_ids()
+        for vehicle_id in degraded_vehicles:
+            nearest_station = self._nearest_station_with_free_slot(location=location)
+            vehicle = self.vehicles[vehicle_id]
+            if nearest_station is None:
+                raise ConflictError("No station with free slot available")
+            vehicle.apply_treatment()
+            self.degraded_repo.remove_vehicle(vehicle_id)
+            nearest_station.add_vehicle(vehicle_id)
+            vehicle.dock_to_station(nearest_station.container_id)
+            treated.append(vehicle_id)
+
+        return treated
+
+
     # -----------------------------
     # Helper Functions
     # -----------------------------
