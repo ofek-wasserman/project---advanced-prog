@@ -243,7 +243,7 @@ class FleetManager:
     def active_user_ids(self) -> list[int]:
         return sorted(self.active_rides.active_user_ids())
 
-    def report_degraded_during_ride(self,vehicle_id:str, user_id:int) -> None:
+    def report_degraded(self,vehicle_id:str, user_id:int) -> None:
         """
         Report a vehicle as degraded.
         Args:
@@ -267,11 +267,13 @@ class FleetManager:
         ride.report_degraded()
         ride.price = 0
 
+        # remove from active rides to compleat rides
         self.active_rides.remove(ride.ride_id)
+        self.completed_rides[ride.ride_id] = ride
 
-        vehicles = self.vehicles.get(vehicle_id)
-        vehicles.move_to_repo()
-        vehicles.mark_degraded()
+        vehicle = self.vehicles.get(vehicle_id)
+        vehicle.move_to_repo()
+        vehicle.mark_degraded()
         self.degraded_repo.add_vehicle(vehicle_id)
 
 
