@@ -110,16 +110,16 @@ class TestSaveStateStructure:
         data = json.loads(out.read_text(encoding="utf-8"))
         assert data["schema_version"] == SCHEMA_VERSION
 
-    def test_saved_at_is_iso_utc_string(self, tmp_path: Path):
+    def test_saved_at_is_naive_iso_string(self, tmp_path: Path):
         fm = _minimal_fleet_manager()
         out = tmp_path / "state.json"
         save_state(fm, out)
         data = json.loads(out.read_text(encoding="utf-8"))
         saved_at = data["saved_at"]
         assert isinstance(saved_at, str)
-        assert saved_at.endswith("Z")
-        # Must parse without error
-        datetime.strptime(saved_at, "%Y-%m-%dT%H:%M:%SZ")
+        assert not saved_at.endswith("Z")
+        # Must parse without error as naive ISO
+        datetime.strptime(saved_at, "%Y-%m-%dT%H:%M:%S")
 
     def test_overwrite_on_second_call(self, tmp_path: Path):
         fm = _minimal_fleet_manager()
@@ -131,6 +131,46 @@ class TestSaveStateStructure:
         second = json.loads(out.read_text())
         assert len(second["users"]) == 1
         assert len(first["users"]) == 0
+
+
+# ---------------------------------------------------------------------------
+# Users serialization tests
+# ---------------------------------------------------------------------------
+
+class TestUsersSerialisation:
+    def test_empty_users_is_empty_dict(self, tmp_path: Path):
+        fm = _minimal_fleet_manager()
+        out = tmp_path / "state.json"
+        save_state(fm, out)
+        data = json.loads(out.read_text())
+        assert data["users"] == {}
+
+    def test_users_is_dict_keyed_by_string_id(self, tmp_path: Path):
+        fm = _minimal_fleet_manager()
+        fm.register_user("tok_xyz")
+        out = tmp_path / "state.json"
+        save_state(fm, out)
+        data = json.loads(out.read_text())
+        assert isinstance(data["users"], dict)
+        assert "1" in data["users"]
+
+    def test_user_fields(self, tmp_path: Path):
+        fm = _minimal_fleet_manager()
+        fm.register_user("tok_xyz")
+        out = tmp_path / "state.json"
+        save_state(fm, out)
+        data = json.loads(out.read_text())
+        assert data["users"]["1"] == {"user_id": 1, "payment_token": "tok_xyz"}
+
+    def test_multiple_users_all_present(self, tmp_path: Path):
+        fm = _minimal_fleet_manager()
+        fm.register_user("tok_a")
+        fm.register_user("tok_b")
+        fm.register_user("tok_c")
+        out = tmp_path / "state.json"
+        save_state(fm, out)
+        data = json.loads(out.read_text())
+        assert set(data["users"].keys()) == {"1", "2", "3"}
 
 
 # ---------------------------------------------------------------------------
@@ -181,36 +221,7 @@ class TestCounters:
         assert data["next_ride_id"] == 6
 
 
-# ---------------------------------------------------------------------------
-# Users serialization tests
-# ---------------------------------------------------------------------------
 
-class TestUsersSerialisation:
-    def test_empty_users(self, tmp_path: Path):
-        fm = _minimal_fleet_manager()
-        out = tmp_path / "state.json"
-        save_state(fm, out)
-        data = json.loads(out.read_text())
-        assert data["users"] == []
-
-    def test_user_fields(self, tmp_path: Path):
-        fm = _minimal_fleet_manager()
-        fm.register_user("tok_xyz")
-        out = tmp_path / "state.json"
-        save_state(fm, out)
-        data = json.loads(out.read_text())
-        assert data["users"] == [{"user_id": 1, "payment_token": "tok_xyz"}]
-
-    def test_users_sorted_by_user_id(self, tmp_path: Path):
-        fm = _minimal_fleet_manager()
-        fm.register_user("tok_a")
-        fm.register_user("tok_b")
-        fm.register_user("tok_c")
-        out = tmp_path / "state.json"
-        save_state(fm, out)
-        data = json.loads(out.read_text())
-        ids = [u["user_id"] for u in data["users"]]
-        assert ids == sorted(ids)
 
 
 # ---------------------------------------------------------------------------
@@ -218,12 +229,28 @@ class TestUsersSerialisation:
 # ---------------------------------------------------------------------------
 
 class TestActiveRidesSerialisation:
-    def test_empty_active_rides(self, tmp_path: Path):
+    def test_empty_active_rides_is_empty_dict(self, tmp_path: Path):
         fm = _minimal_fleet_manager()
         out = tmp_path / "state.json"
         save_state(fm, out)
         data = json.loads(out.read_text())
-        assert data["active_rides"] == []
+        assert data["active_rides"] == {}
+
+    def test_active_rides_is_dict_keyed_by_string_id(self, tmp_path: Path):
+        fm = _minimal_fleet_manager()
+        ride = Ride(
+            ride_id=1,
+            user_id=1,
+            vehicle_id="V-001",
+            start_time=datetime(2026, 3, 10, 14, 20, 0),
+            start_station_id=1,
+        )
+        fm.active_rides.add(ride)
+        out = tmp_path / "state.json"
+        save_state(fm, out)
+        data = json.loads(out.read_text())
+        assert isinstance(data["active_rides"], dict)
+        assert "1" in data["active_rides"]
 
     def test_active_ride_fields(self, tmp_path: Path):
         fm = _minimal_fleet_manager()
@@ -238,31 +265,33 @@ class TestActiveRidesSerialisation:
         out = tmp_path / "state.json"
         save_state(fm, out)
         data = json.loads(out.read_text())
-        r = data["active_rides"][0]
+        r = data["active_rides"]["1"]
         assert r["ride_id"] == 1
         assert r["user_id"] == 1
         assert r["vehicle_id"] == "V-001"
-        assert r["start_time"] == "2026-03-10T14:20:00Z"
-        assert r["end_time"] is None
-        assert r["end_station_id"] is None
+        assert r["start_time"] == "2026-03-10T14:20:00"
         assert r["reported_degraded"] is False
-        assert r["price"] is None
+        # active rides do NOT carry end_time, end_station_id, or price
+        assert "end_time" not in r
+        assert "end_station_id" not in r
+        assert "price" not in r
 
-    def test_active_rides_sorted_by_ride_id(self, tmp_path: Path):
+    def test_active_ride_start_time_is_naive_iso(self, tmp_path: Path):
         fm = _minimal_fleet_manager()
-        for i in [3, 1, 2]:
-            fm.active_rides.add(Ride(
-                ride_id=i,
-                user_id=i,
-                vehicle_id=f"V-00{i}",
-                start_time=datetime(2026, 3, 10, 14, 0, 0),
-                start_station_id=1,
-            ))
+        ride = Ride(
+            ride_id=2,
+            user_id=1,
+            vehicle_id="V-001",
+            start_time=datetime(2026, 3, 10, 9, 5, 30),
+            start_station_id=1,
+        )
+        fm.active_rides.add(ride)
         out = tmp_path / "state.json"
         save_state(fm, out)
         data = json.loads(out.read_text())
-        ids = [r["ride_id"] for r in data["active_rides"]]
-        assert ids == sorted(ids)
+        ts = data["active_rides"]["2"]["start_time"]
+        assert not ts.endswith("Z")
+        datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S")
 
 
 # ---------------------------------------------------------------------------
@@ -295,9 +324,29 @@ class TestCompletedRidesSerialisation:
         data = json.loads(out.read_text())
         r = data["completed_rides"][0]
         assert r["ride_id"] == 7
-        assert r["end_time"] == "2026-03-10T13:18:00Z"
+        assert r["end_time"] == "2026-03-10T13:18:00"
         assert r["end_station_id"] == 3
         assert r["price"] == 15.0
+
+    def test_completed_ride_times_are_naive_iso(self, tmp_path: Path):
+        fm = _minimal_fleet_manager()
+        ride = Ride(
+            ride_id=1,
+            user_id=1,
+            vehicle_id="V-001",
+            start_time=datetime(2026, 3, 10, 13, 0, 0),
+            start_station_id=1,
+            end_time=datetime(2026, 3, 10, 13, 10, 0),
+            end_station_id=1,
+            price=15.0,
+        )
+        fm.completed_rides[1] = ride
+        out = tmp_path / "state.json"
+        save_state(fm, out)
+        data = json.loads(out.read_text())
+        r = data["completed_rides"][0]
+        assert not r["start_time"].endswith("Z")
+        assert not r["end_time"].endswith("Z")
 
     def test_degraded_ride_price_is_zero(self, tmp_path: Path):
         fm = _minimal_fleet_manager()
@@ -324,62 +373,43 @@ class TestCompletedRidesSerialisation:
 # ---------------------------------------------------------------------------
 
 class TestVehiclesSerialisation:
-    def test_bicycle_type_field(self, tmp_path: Path):
+    def test_vehicles_is_dict_keyed_by_vehicle_id(self, tmp_path: Path):
         fm = _minimal_fleet_manager()
         out = tmp_path / "state.json"
         save_state(fm, out)
         data = json.loads(out.read_text())
-        assert data["vehicles"][0]["type"] == "bicycle"
+        assert isinstance(data["vehicles"], dict)
+        assert "V-001" in data["vehicles"]
 
-    def test_ebike_type_field(self, tmp_path: Path):
-        ebike = EBike(
-            vehicle_id="E-001",
-            status=VehicleStatus.AVAILABLE,
-            rides_since_last_treated=0,
-            last_treated_date=date(2026, 1, 1),
-            station_id=1,
-            active_ride_id=None,
-            charge_pct=80,
-        )
-        station = _make_station(1)
-        fm = FleetManager(stations={1: station}, vehicles={"E-001": ebike})
-        out = tmp_path / "state.json"
-        save_state(fm, out)
-        data = json.loads(out.read_text())
-        v = data["vehicles"][0]
-        assert v["type"] == "electric_bicycle"
-        assert v["charge_pct"] == 80
-
-    def test_scooter_type_and_charge(self, tmp_path: Path):
-        scooter = _make_scooter("S-001", station_id=1, charge_pct=55)
-        station = _make_station(1)
-        fm = FleetManager(stations={1: station}, vehicles={"S-001": scooter})
-        out = tmp_path / "state.json"
-        save_state(fm, out)
-        data = json.loads(out.read_text())
-        v = data["vehicles"][0]
-        assert v["type"] == "scooter"
-        assert v["charge_pct"] == 55
-
-    def test_bicycle_has_no_charge_pct(self, tmp_path: Path):
+    def test_vehicle_has_only_mutable_fields(self, tmp_path: Path):
         fm = _minimal_fleet_manager()
         out = tmp_path / "state.json"
         save_state(fm, out)
         data = json.loads(out.read_text())
-        assert "charge_pct" not in data["vehicles"][0]
+        v = data["vehicles"]["V-001"]
+        assert set(v.keys()) == {"status", "rides_since_last_treated", "last_treated_date", "station_id"}
 
-    def test_vehicle_fields(self, tmp_path: Path):
+    def test_vehicle_fields_values(self, tmp_path: Path):
         fm = _minimal_fleet_manager()
         out = tmp_path / "state.json"
         save_state(fm, out)
         data = json.loads(out.read_text())
-        v = data["vehicles"][0]
-        assert v["vehicle_id"] == "V-001"
+        v = data["vehicles"]["V-001"]
         assert v["status"] == "available"
         assert v["rides_since_last_treated"] == 0
         assert v["last_treated_date"] == "2026-01-01"
         assert v["station_id"] == 1
-        assert v["active_ride_id"] is None
+
+    def test_vehicle_no_type_or_id_fields(self, tmp_path: Path):
+        fm = _minimal_fleet_manager()
+        out = tmp_path / "state.json"
+        save_state(fm, out)
+        data = json.loads(out.read_text())
+        v = data["vehicles"]["V-001"]
+        assert "type" not in v
+        assert "vehicle_id" not in v
+        assert "active_ride_id" not in v
+        assert "charge_pct" not in v
 
     def test_in_ride_vehicle_has_null_station_id(self, tmp_path: Path):
         bike = _make_bicycle("V-001", station_id=None, active_ride_id=3)
@@ -394,8 +424,25 @@ class TestVehiclesSerialisation:
         out = tmp_path / "state.json"
         save_state(fm, out)
         data = json.loads(out.read_text())
-        assert data["vehicles"][0]["station_id"] is None
-        assert data["vehicles"][0]["active_ride_id"] == 3
+        assert data["vehicles"]["V-001"]["station_id"] is None
+
+    def test_ebike_mutable_fields_only(self, tmp_path: Path):
+        ebike = EBike(
+            vehicle_id="E-001",
+            status=VehicleStatus.AVAILABLE,
+            rides_since_last_treated=0,
+            last_treated_date=date(2026, 1, 1),
+            station_id=1,
+            active_ride_id=None,
+            charge_pct=80,
+        )
+        station = _make_station(1)
+        fm = FleetManager(stations={1: station}, vehicles={"E-001": ebike})
+        out = tmp_path / "state.json"
+        save_state(fm, out)
+        data = json.loads(out.read_text())
+        v = data["vehicles"]["E-001"]
+        assert set(v.keys()) == {"status", "rides_since_last_treated", "last_treated_date", "station_id"}
 
     def test_vehicles_sorted_by_vehicle_id(self, tmp_path: Path):
         station = _make_station(1)
@@ -408,8 +455,8 @@ class TestVehiclesSerialisation:
         out = tmp_path / "state.json"
         save_state(fm, out)
         data = json.loads(out.read_text())
-        ids = [v["vehicle_id"] for v in data["vehicles"]]
-        assert ids == sorted(ids)
+        keys = list(data["vehicles"].keys())
+        assert keys == sorted(keys)
 
 
 # ---------------------------------------------------------------------------

@@ -8,12 +8,11 @@ docs/DECISIONS.md (state.json Schema section).
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from src.domain.ride import Ride
     from src.services.fleet_manager import FleetManager
 
 SCHEMA_VERSION = 1
@@ -44,7 +43,7 @@ def _build_state(fm: FleetManager) -> dict:
     )
     return {
         "schema_version": SCHEMA_VERSION,
-        "saved_at": datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "saved_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "next_user_id": max(fm.users.keys(), default=0) + 1,
         "next_ride_id": max(all_ride_ids, default=0) + 1,
         "users": _serialize_users(fm),
@@ -55,57 +54,55 @@ def _build_state(fm: FleetManager) -> dict:
     }
 
 
-def _serialize_users(fm: FleetManager) -> list:
-    return [
-        {"user_id": u.user_id, "payment_token": u.payment_token}
-        for u in sorted(fm.users.values(), key=lambda u: u.user_id)
-    ]
-
-
-def _serialize_ride(ride: Ride) -> dict:
+def _serialize_users(fm: FleetManager) -> dict:
     return {
-        "ride_id": ride.ride_id,
-        "user_id": ride.user_id,
-        "vehicle_id": ride.vehicle_id,
-        "start_time": ride.start_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "start_station_id": ride.start_station_id,
-        "end_time": (
-            ride.end_time.strftime("%Y-%m-%dT%H:%M:%SZ") if ride.end_time else None
-        ),
-        "end_station_id": ride.end_station_id,
-        "reported_degraded": ride.reported_degraded,
-        "price": ride.price,
+        str(u.user_id): {"user_id": u.user_id, "payment_token": u.payment_token}
+        for u in sorted(fm.users.values(), key=lambda u: u.user_id)
     }
 
 
-def _serialize_active_rides(fm: FleetManager) -> list:
-    return [
-        _serialize_ride(r)
-        for r in sorted(fm.active_rides.rides.values(), key=lambda r: r.ride_id)
-    ]
+def _fmt_dt(dt: datetime) -> str:
+    return dt.strftime("%Y-%m-%dT%H:%M:%S")
+
+
+def _serialize_active_rides(fm: FleetManager) -> dict:
+    result = {}
+    for ride in sorted(fm.active_rides.rides.values(), key=lambda r: r.ride_id):
+        result[str(ride.ride_id)] = {
+            "ride_id": ride.ride_id,
+            "user_id": ride.user_id,
+            "vehicle_id": ride.vehicle_id,
+            "start_time": _fmt_dt(ride.start_time),
+            "start_station_id": ride.start_station_id,
+            "reported_degraded": ride.reported_degraded,
+        }
+    return result
 
 
 def _serialize_completed_rides(fm: FleetManager) -> list:
     return [
-        _serialize_ride(r)
+        {
+            "ride_id": r.ride_id,
+            "user_id": r.user_id,
+            "vehicle_id": r.vehicle_id,
+            "start_time": _fmt_dt(r.start_time),
+            "start_station_id": r.start_station_id,
+            "end_time": _fmt_dt(r.end_time) if r.end_time else None,
+            "end_station_id": r.end_station_id,
+            "reported_degraded": r.reported_degraded,
+            "price": r.price,
+        }
         for r in sorted(fm.completed_rides.values(), key=lambda r: r.ride_id)
     ]
 
 
-def _serialize_vehicles(fm: FleetManager) -> list:
-    result = []
-    for v in sorted(fm.vehicles.values(), key=lambda v: v.vehicle_id):
-        entry: dict = {
-            "vehicle_id": v.vehicle_id,
-            "type": v.VEHICLE_TYPE,
+def _serialize_vehicles(fm: FleetManager) -> dict:
+    return {
+        v.vehicle_id: {
             "status": v.status.value,
             "rides_since_last_treated": v.rides_since_last_treated,
             "last_treated_date": v.last_treated_date.isoformat(),
             "station_id": v.station_id,
-            "active_ride_id": v.active_ride_id,
         }
-        charge_pct = getattr(v, "charge_pct", None)
-        if charge_pct is not None:
-            entry["charge_pct"] = charge_pct
-        result.append(entry)
-    return result
+        for v in sorted(fm.vehicles.values(), key=lambda v: v.vehicle_id)
+    }
