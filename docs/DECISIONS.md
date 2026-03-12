@@ -203,7 +203,7 @@ On startup, if `state.json` exists:
 5. Rebuild `vehicle.active_ride_id` for each vehicle referenced in `active_rides` (this field is not stored in `vehicles` and must be derived)
 6. Restore completed rides history from `completed_rides`
 7. Restore `DegradedRepo` from `degraded_repo`
-8. Rebuild station inventories: for each vehicle whose `station_id` is non-null in `vehicles`, add it to that station's inventory. Vehicles in active rides or in the degraded repo must not appear in any station inventory.
+8. Rebuild station inventories: clear all station inventories first (so no CSV bootstrap inventory remains), then for each vehicle whose `station_id` is non-null in `vehicles`, add it to that station's inventory. Vehicles in active rides or in the degraded repo must not appear in any station inventory.
 9. Set ID counters to `next_user_id` and `next_ride_id`
 
 If `state.json` does not exist, fall back to Phase 1 CSV-only bootstrap.
