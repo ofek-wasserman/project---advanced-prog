@@ -724,6 +724,53 @@ class TestFleetManager:
         station.add_vehicle.assert_called_once_with("V_OK")
         degraded_repo.add_vehicle.assert_called_once_with("V_BAD")
         ineligible.mark_degraded.assert_called_once()
+
+    def test_multiple_ride_lifecycles_do_not_reuse_ride_ids(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+
+        # user exists
+        user_id = fm.register_user("tok_test")
+
+        # station with mutable inventory
+        inventory = {"V010"}
+
+        station = MagicMock()
+        station.container_id = 7
+        station.lat = 1.0
+        station.lon = 2.0
+        station.get_vehicle_ids.side_effect = lambda: set(inventory)
+        station.remove_vehicle.side_effect = lambda vid: inventory.remove(vid)
+        station.add_vehicle.side_effect = lambda vid: inventory.add(vid)
+        station.has_free_slot.return_value = True
+
+        # always pick this station for start/end
+        fm.nearest_station_with_available_vehicle = MagicMock(return_value=station)
+        fm._nearest_station_with_free_slot = MagicMock(return_value=station)
+
+        # vehicle
+        vehicle = MagicMock(vehicle_id="V010", rides_since_last_treated=0)
+        vehicle.checkout_to_ride = MagicMock()
+        vehicle.add_ride_count = MagicMock()
+        vehicle.is_eligible.return_value = True
+        vehicle.dock_to_station = MagicMock()
+        fm.vehicles = {"V010": vehicle}
+
+        # billing success
+        fm.billing_service = MagicMock()
+        fm.billing_service.calculate_price.return_value = 15.0
+        fm.billing_service.process_payment.return_value = True
+
+        # ---- lifecycle #1 ----
+        ride1, _ = fm.start_ride(user_id=user_id, location=(0.0, 0.0))
+        assert ride1.ride_id == 1
+
+        fm.end_ride(ride_id=ride1.ride_id, location=(9.0, 9.0))
+        assert ride1.ride_id in fm.completed_rides  # completion persisted
+
+        # ---- lifecycle #2 ----
+        ride2, _ = fm.start_ride(user_id=user_id, location=(0.0, 0.0))
+        assert ride2.ride_id == 2  # must not reuse 1
+        assert ride2.ride_id != ride1.ride_id
     # -----------------------------
     # apply_treatment tests (Phase 2 /vehicle/treat)
     # -----------------------------

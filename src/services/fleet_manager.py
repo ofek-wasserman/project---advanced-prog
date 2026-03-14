@@ -33,6 +33,7 @@ class FleetManager:
 
         # helper data structure to track registered payment tokens for quick validation
         self._registered_tokens: set[str] = set()
+        self._next_ride_id = 1
         self._initialize_state()
 
     #-----------------------------
@@ -341,9 +342,13 @@ class FleetManager:
 
     def _generate_ride_id(self) -> int:
         """
-        Generates a new unique ride ID. In a real implementation, this could be more robust.
+        Generate a unique ride ID.
+        Returns:
+            int: The generated ride ID.
         """
-        return max(self.active_rides.rides.keys(), default=0) + 1
+        ride_id = self._next_ride_id
+        self._next_ride_id += 1
+        return ride_id
 
     def _nearest_station_with_free_slot(self,
                                         location:tuple[float, float],
