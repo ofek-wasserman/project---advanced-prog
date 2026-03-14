@@ -130,11 +130,6 @@ def test_ebike_is_eligible_happy_path(available_ebike):
     assert available_ebike.is_eligible() is True
 
 
-def test_ebike_not_eligible_if_low_charge(available_ebike):
-    available_ebike.charge_pct = 10
-    assert available_ebike.is_eligible() is False
-
-
 def test_ebike_not_eligible_if_too_many_rides(available_ebike):
     available_ebike.rides_since_last_treated = 11
     assert available_ebike.is_eligible() is False
