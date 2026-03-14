@@ -877,3 +877,105 @@ class TestFleetManager:
 
         assert treated.count("V999") == 1
         v999.apply_treatment.assert_called_once()
+
+
+    # -----------------------------
+    # report_degraded_during_ride tests
+    # -----------------------------
+
+    def test_report_degraded_success_moves_vehicle_removes_active_ride_and_stores_completed(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock(payment_token="tok_test")}
+        fm.completed_rides = {}
+
+        vehicle = MagicMock(vehicle_id="V010")
+        vehicle.move_to_repo = MagicMock()
+        vehicle.mark_degraded = MagicMock()
+        fm.vehicles = {"V010": vehicle}
+
+        fm.degraded_repo = MagicMock()
+        fm.degraded_repo.add_vehicle = MagicMock()
+
+        ride = MagicMock(ride_id=123, user_id=1, vehicle_id="V010", price=15.0)
+        ride.report_degraded = MagicMock()
+        fm.active_rides.add(ride)
+
+        fm.report_degraded(vehicle_id="V010", user_id=1)
+
+        # Ride is marked degraded and free
+        ride.report_degraded.assert_called_once()
+        assert ride.price == 0
+
+        # Ride removed from active and stored in completed
+        with pytest.raises(NotFoundError):
+            fm.active_rides.get(123)
+        assert fm.completed_rides[123] is ride
+
+        # Vehicle moved + marked degraded + added to repo
+        vehicle.move_to_repo.assert_called_once()
+        vehicle.mark_degraded.assert_called_once()
+        fm.degraded_repo.add_vehicle.assert_called_once_with("V010")
+
+
+    def test_report_degraded_user_missing_raises_not_found(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {}
+        fm.vehicles = {"V010": MagicMock()}
+
+        with pytest.raises(NotFoundError, match="User does not exist"):
+            fm.report_degraded(vehicle_id="V010", user_id=1)
+
+
+    def test_report_degraded_vehicle_missing_raises_not_found(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock()}
+        fm.vehicles = {}
+
+        with pytest.raises(NotFoundError, match="Vehicle does not exist"):
+            fm.report_degraded(vehicle_id="V010", user_id=1)
+
+
+    def test_report_degraded_vehicle_not_in_any_active_ride_raises_conflict(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock()}
+        fm.vehicles = {"V010": MagicMock()}
+
+        # No rides in registry => vehicle not in active ride
+        with pytest.raises(ConflictError, match="Vehicle is not in an active ride"):
+            fm.report_degraded(vehicle_id="V010", user_id=1)
+
+
+    def test_report_degraded_user_has_no_active_ride_raises_conflict(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock()}
+        fm.vehicles = {"V010": MagicMock()}
+
+        # Vehicle is in some active ride, but not for this user
+        other_ride = MagicMock(ride_id=1, user_id=999, vehicle_id="V010")
+        fm.active_rides.add(other_ride)
+
+        with pytest.raises(ConflictError, match="User does not have an active ride"):
+            fm.report_degraded(vehicle_id="V010", user_id=1)
+
+
+    def test_report_degraded_vehicle_not_in_user_active_ride_raises_conflict(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock()}
+        fm.vehicles = {"V010": MagicMock(), "V999": MagicMock()}
+
+        # User has active ride, but with different vehicle
+        ride = MagicMock(ride_id=2, user_id=1, vehicle_id="V999")
+        ride.report_degraded = MagicMock()
+        fm.active_rides.add(ride)
+
+        # Ensure V010 is not in any active ride too (or error would be earlier)
+        with pytest.raises(ConflictError, match="Vehicle is not in an active ride"):
+            fm.report_degraded(vehicle_id="V010", user_id=1)
+
+        # Now put V010 into a different user's ride so it passes is_vehicle_in_ride,
+        # but still fails "vehicle not in user active ride"
+        ride2 = MagicMock(ride_id=3, user_id=2, vehicle_id="V010")
+        fm.active_rides.add(ride2)
+
+        with pytest.raises(ConflictError, match="Vehicle not in user active ride"):
+            fm.report_degraded(vehicle_id="V010", user_id=1)

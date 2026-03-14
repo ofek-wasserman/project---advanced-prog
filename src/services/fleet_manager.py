@@ -278,6 +278,42 @@ class FleetManager:
             treated.append(vehicle_id)
 
         return treated
+    def report_degraded(self,vehicle_id:str, user_id:int) -> None:
+        """
+        Report a vehicle as degraded.
+        Args:
+            vehicle_id (str): The unique identifier for the vehicle.
+        """
+        # validation
+        if user_id not in self.users:
+            raise NotFoundError("User does not exist.")
+        if vehicle_id not in self.vehicles:
+            raise NotFoundError("Vehicle does not exist.")
+        if not self.active_rides.is_vehicle_in_ride(vehicle_id):
+            raise ConflictError("Vehicle is not in an active ride.")
+
+        ride = self.active_rides.get_active_ride_for_user(user_id)
+        if ride is None:
+            raise ConflictError("User does not have an active ride.")
+        if vehicle_id != ride.vehicle_id:
+            raise ConflictError("Vehicle not in user active ride.")
+
+        # degraded
+        ride.report_degraded()
+        ride.price = 0
+
+        # remove from active rides to compleat rides
+        self.active_rides.remove(ride.ride_id)
+        self.completed_rides[ride.ride_id] = ride
+
+        vehicle = self.vehicles.get(vehicle_id)
+        vehicle.move_to_repo()
+        vehicle.mark_degraded()
+        self.degraded_repo.add_vehicle(vehicle_id)
+
+
+
+
 
 
     # -----------------------------
