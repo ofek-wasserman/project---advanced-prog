@@ -243,6 +243,79 @@ class FleetManager:
     def active_user_ids(self) -> list[int]:
         return sorted(self.active_rides.active_user_ids())
 
+    def apply_treatment(self, treatment_location:tuple[float, float]) -> list[str]:
+        """
+        Run maintenance on all treatable vehicles
+        Arg:
+            location (tuple[float, float]): The treatment location (latitude, longitude).
+        Return:
+                vehicle IDs list of treated vehicles
+        """
+        treated: list[str] = []
+        degraded_ids = set(self.degraded_repo.get_vehicle_ids())
+        non_degraded_ids = [vid for vid in self.vehicles.keys()
+                            if vid not in degraded_ids
+                            and self.vehicles[vid].can_initiate_treatment()]
+
+        # for degraded vehicles
+        for vehicle_id in degraded_ids:
+            nearest_station = self._nearest_station_with_free_slot(location=treatment_location)
+            if nearest_station is None:
+                raise ConflictError("No station with free slot available")
+            degr_vehicle = self.vehicles.get(vehicle_id)
+            if degr_vehicle is None:
+                raise NotFoundError(f"Vehicle {vehicle_id} not found.")
+            degr_vehicle.apply_treatment()
+            self.degraded_repo.remove_vehicle(vehicle_id)
+            nearest_station.add_vehicle(vehicle_id)
+            degr_vehicle.dock_to_station(nearest_station.container_id)
+            treated.append(vehicle_id)
+
+        # for eligible vehicles that can have a treatment
+        for vehicle_id in non_degraded_ids:
+            vehicle = self.vehicles[vehicle_id]
+            vehicle.apply_treatment()
+            treated.append(vehicle_id)
+
+        return treated
+    def report_degraded(self,vehicle_id:str, user_id:int) -> None:
+        """
+        Report a vehicle as degraded.
+        Args:
+            vehicle_id (str): The unique identifier for the vehicle.
+        """
+        # validation
+        if user_id not in self.users:
+            raise NotFoundError("User does not exist.")
+        if vehicle_id not in self.vehicles:
+            raise NotFoundError("Vehicle does not exist.")
+        if not self.active_rides.is_vehicle_in_ride(vehicle_id):
+            raise ConflictError("Vehicle is not in an active ride.")
+
+        ride = self.active_rides.get_active_ride_for_user(user_id)
+        if ride is None:
+            raise ConflictError("User does not have an active ride.")
+        if vehicle_id != ride.vehicle_id:
+            raise ConflictError("Vehicle not in user active ride.")
+
+        # degraded
+        ride.report_degraded()
+        ride.price = 0
+
+        # remove from active rides to compleat rides
+        self.active_rides.remove(ride.ride_id)
+        self.completed_rides[ride.ride_id] = ride
+
+        vehicle = self.vehicles.get(vehicle_id)
+        vehicle.move_to_repo()
+        vehicle.mark_degraded()
+        self.degraded_repo.add_vehicle(vehicle_id)
+
+
+
+
+
+
     # -----------------------------
     # Helper Functions
     # -----------------------------

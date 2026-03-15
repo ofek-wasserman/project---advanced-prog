@@ -320,16 +320,14 @@ class EBike(ElectricVehicle):
         An E-Bike is eligible if:
         - Status is AVAILABLE
         - It has not exceeded 10 rides since last treatment
-        - Battery charge is at least 20%
+        - It is not currently assigned to an active ride
 
-        This extends the base eligibility logic
-        with battery constraints.
+        Battery is currently not part of the active eligibility rules.
         """
         return (
             self.status == ve.VehicleStatus.AVAILABLE
             and self.rides_since_last_treated <= 10
             and self.active_ride_id is None
-            and self.is_charged_enough()
         )
 
     def can_initiate_treatment(self) -> bool:
@@ -378,16 +376,14 @@ class Scooter(ElectricVehicle):
         A scooter is eligible if:
         - Status is AVAILABLE
         - It has not exceeded 10 rides since last treatment
-        - Battery charge is at least 20%
+        - It is not currently assigned to an active ride
 
-        This extends the base eligibility logic
-        with battery constraints.
+        Battery is currently not part of the active eligibility rules.
         """
         return (
             self.status == ve.VehicleStatus.AVAILABLE
             and self.rides_since_last_treated <= 10
             and self.active_ride_id is None
-            and self.is_charged_enough()
         )
 
     def can_initiate_treatment(self) -> bool:

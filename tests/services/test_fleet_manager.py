@@ -724,3 +724,258 @@ class TestFleetManager:
         station.add_vehicle.assert_called_once_with("V_OK")
         degraded_repo.add_vehicle.assert_called_once_with("V_BAD")
         ineligible.mark_degraded.assert_called_once()
+    # -----------------------------
+    # apply_treatment tests (Phase 2 /vehicle/treat)
+    # -----------------------------
+
+    def test_apply_treatment_treats_only_threshold_eligible_vehicles(self):
+        fm = FleetManager(stations={}, vehicles={})
+
+        v1 = MagicMock()
+        v1.can_initiate_treatment.return_value = True
+        v1.apply_treatment = MagicMock()
+
+        v2 = MagicMock()
+        v2.can_initiate_treatment.return_value = False
+        v2.apply_treatment = MagicMock()
+
+        fm.vehicles = {"V010": v1, "V011": v2}
+
+        fm.degraded_repo = MagicMock()
+        fm.degraded_repo.get_vehicle_ids.return_value = set()
+
+        treated = fm.apply_treatment(treatment_location=(0.0, 0.0))
+
+        assert treated == ["V010"]
+        v1.apply_treatment.assert_called_once()
+        v2.apply_treatment.assert_not_called()
+
+
+    def test_apply_treatment_degraded_vehicle_removed_from_repo_and_docked_to_station(self):
+        fm = FleetManager(stations={}, vehicles={})
+
+        # No threshold-eligible vehicles
+        v_ok = MagicMock()
+        v_ok.can_initiate_treatment.return_value = False
+        fm.vehicles = {"V010": v_ok}
+
+        # Degraded vehicle
+        v_deg = MagicMock()
+        v_deg.can_initiate_treatment.return_value = False
+        v_deg.apply_treatment = MagicMock()
+        v_deg.dock_to_station = MagicMock()
+        fm.vehicles["V999"] = v_deg
+
+        # Degraded repo contains V999
+        fm.degraded_repo = MagicMock()
+        fm.degraded_repo.get_vehicle_ids.return_value = {"V999"}
+        fm.degraded_repo.remove_vehicle = MagicMock()
+
+        # Nearest station with free slot
+        station = MagicMock(container_id=7, lat=1.0, lon=2.0)
+        station.add_vehicle = MagicMock()
+        fm._nearest_station_with_free_slot = MagicMock(return_value=station)
+
+        treated = fm.apply_treatment(treatment_location=(9.0, 9.0))
+
+        assert "V999" in treated
+
+        # Order invariant: remove from repo before station add
+        calls = []
+        fm.degraded_repo.remove_vehicle.side_effect = lambda vid: calls.append(("repo_remove", vid))
+        station.add_vehicle.side_effect = lambda vid: calls.append(("station_add", vid))
+
+        fm.apply_treatment(treatment_location=(9.0, 9.0))
+
+        assert calls[0] == ("repo_remove", "V999")
+        assert calls[1] == ("station_add", "V999")
+
+        v_deg.dock_to_station.assert_called_with(7)
+
+
+    def test_apply_treatment_degraded_vehicle_no_station_free_slot_raises_conflict(self):
+        fm = FleetManager(stations={}, vehicles={})
+
+        v_deg = MagicMock()
+        v_deg.can_initiate_treatment.return_value = False
+        v_deg.apply_treatment = MagicMock()
+        v_deg.dock_to_station = MagicMock()
+        fm.vehicles = {"V999": v_deg}
+
+        fm.degraded_repo = MagicMock()
+        fm.degraded_repo.get_vehicle_ids.return_value = {"V999"}
+        fm.degraded_repo.remove_vehicle = MagicMock()
+
+        fm._nearest_station_with_free_slot = MagicMock(return_value=None)
+
+        with pytest.raises(ConflictError, match="No station with free slot available"):
+            fm.apply_treatment(treatment_location=(0.0, 0.0))
+
+        fm.degraded_repo.remove_vehicle.assert_not_called()
+        v_deg.dock_to_station.assert_not_called()
+
+
+    def test_apply_treatment_does_not_leave_degraded_vehicle_in_repo_and_station(self):
+        """
+        Invariant: after treatment, treated degraded vehicle is not in degraded repo and is docked to a station.
+        """
+        fm = FleetManager(stations={}, vehicles={})
+
+        repo_ids = {"V999"}
+
+        def get_ids():
+            return set(repo_ids)
+
+        def remove_vid(vid):
+            repo_ids.remove(vid)
+
+        fm.degraded_repo = MagicMock()
+        fm.degraded_repo.get_vehicle_ids.side_effect = get_ids
+        fm.degraded_repo.remove_vehicle.side_effect = remove_vid
+
+        v_deg = MagicMock()
+        v_deg.can_initiate_treatment.return_value = False
+        v_deg.apply_treatment = MagicMock()
+        v_deg.dock_to_station = MagicMock()
+        fm.vehicles = {"V999": v_deg}
+
+        station = MagicMock(container_id=3)
+        station.add_vehicle = MagicMock()
+        fm._nearest_station_with_free_slot = MagicMock(return_value=station)
+
+        fm.apply_treatment(treatment_location=(0.0, 0.0))
+
+        assert "V999" not in repo_ids
+        station.add_vehicle.assert_called_once_with("V999")
+        v_deg.dock_to_station.assert_called_once_with(3)
+
+
+    def test_apply_treatment_degraded_vehicle_not_treated_twice_and_not_duplicated(self):
+        """
+        Regression: degraded vehicle must be treated only once and appear only once in the returned list,
+        even if its can_initiate_treatment() would otherwise be True.
+        """
+        fm = FleetManager(stations={}, vehicles={})
+
+        fm.degraded_repo = MagicMock()
+        fm.degraded_repo.get_vehicle_ids.return_value = {"V999"}
+        fm.degraded_repo.remove_vehicle = MagicMock()
+
+        station = MagicMock(container_id=7)
+        station.add_vehicle = MagicMock()
+        fm._nearest_station_with_free_slot = MagicMock(return_value=station)
+
+        v999 = MagicMock(vehicle_id="V999")
+        v999.apply_treatment = MagicMock()
+        v999.dock_to_station = MagicMock()
+        # simulate worst-case: after treatment, it would qualify for second loop
+        v999.can_initiate_treatment.return_value = True
+
+        fm.vehicles = {"V999": v999}
+
+        treated = fm.apply_treatment(treatment_location=(0.0, 0.0))
+
+        assert treated.count("V999") == 1
+        v999.apply_treatment.assert_called_once()
+
+
+    # -----------------------------
+    # report_degraded_during_ride tests
+    # -----------------------------
+
+    def test_report_degraded_success_moves_vehicle_removes_active_ride_and_stores_completed(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock(payment_token="tok_test")}
+        fm.completed_rides = {}
+
+        vehicle = MagicMock(vehicle_id="V010")
+        vehicle.move_to_repo = MagicMock()
+        vehicle.mark_degraded = MagicMock()
+        fm.vehicles = {"V010": vehicle}
+
+        fm.degraded_repo = MagicMock()
+        fm.degraded_repo.add_vehicle = MagicMock()
+
+        ride = MagicMock(ride_id=123, user_id=1, vehicle_id="V010", price=15.0)
+        ride.report_degraded = MagicMock()
+        fm.active_rides.add(ride)
+
+        fm.report_degraded(vehicle_id="V010", user_id=1)
+
+        # Ride is marked degraded and free
+        ride.report_degraded.assert_called_once()
+        assert ride.price == 0
+
+        # Ride removed from active and stored in completed
+        with pytest.raises(NotFoundError):
+            fm.active_rides.get(123)
+        assert fm.completed_rides[123] is ride
+
+        # Vehicle moved + marked degraded + added to repo
+        vehicle.move_to_repo.assert_called_once()
+        vehicle.mark_degraded.assert_called_once()
+        fm.degraded_repo.add_vehicle.assert_called_once_with("V010")
+
+
+    def test_report_degraded_user_missing_raises_not_found(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {}
+        fm.vehicles = {"V010": MagicMock()}
+
+        with pytest.raises(NotFoundError, match="User does not exist"):
+            fm.report_degraded(vehicle_id="V010", user_id=1)
+
+
+    def test_report_degraded_vehicle_missing_raises_not_found(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock()}
+        fm.vehicles = {}
+
+        with pytest.raises(NotFoundError, match="Vehicle does not exist"):
+            fm.report_degraded(vehicle_id="V010", user_id=1)
+
+
+    def test_report_degraded_vehicle_not_in_any_active_ride_raises_conflict(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock()}
+        fm.vehicles = {"V010": MagicMock()}
+
+        # No rides in registry => vehicle not in active ride
+        with pytest.raises(ConflictError, match="Vehicle is not in an active ride"):
+            fm.report_degraded(vehicle_id="V010", user_id=1)
+
+
+    def test_report_degraded_user_has_no_active_ride_raises_conflict(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock()}
+        fm.vehicles = {"V010": MagicMock()}
+
+        # Vehicle is in some active ride, but not for this user
+        other_ride = MagicMock(ride_id=1, user_id=999, vehicle_id="V010")
+        fm.active_rides.add(other_ride)
+
+        with pytest.raises(ConflictError, match="User does not have an active ride"):
+            fm.report_degraded(vehicle_id="V010", user_id=1)
+
+
+    def test_report_degraded_vehicle_not_in_user_active_ride_raises_conflict(self):
+        fm = FleetManager(stations={}, vehicles={}, active_rides=ActiveRidesRegistry())
+        fm.users = {1: MagicMock()}
+        fm.vehicles = {"V010": MagicMock(), "V999": MagicMock()}
+
+        # User has active ride, but with different vehicle
+        ride = MagicMock(ride_id=2, user_id=1, vehicle_id="V999")
+        ride.report_degraded = MagicMock()
+        fm.active_rides.add(ride)
+
+        # Ensure V010 is not in any active ride too (or error would be earlier)
+        with pytest.raises(ConflictError, match="Vehicle is not in an active ride"):
+            fm.report_degraded(vehicle_id="V010", user_id=1)
+
+        # Now put V010 into a different user's ride so it passes is_vehicle_in_ride,
+        # but still fails "vehicle not in user active ride"
+        ride2 = MagicMock(ride_id=3, user_id=2, vehicle_id="V010")
+        fm.active_rides.add(ride2)
+
+        with pytest.raises(ConflictError, match="Vehicle not in user active ride"):
+            fm.report_degraded(vehicle_id="V010", user_id=1)
