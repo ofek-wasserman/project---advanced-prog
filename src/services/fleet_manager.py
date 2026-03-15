@@ -34,11 +34,6 @@ class FleetManager:
         # helper data structure to track registered payment tokens for quick validation
         self._registered_tokens: set[str] = set()
         self._initialize_state()
-        self._next_user_id = max(self.users.keys(), default=0) + 1
-        self._next_ride_id = max(
-            list(self.active_rides.rides.keys()) + list(self.completed_rides.keys()),
-            default=0,
-        ) + 1
 
     #-----------------------------
     # initializer vehicle state normalization
@@ -103,8 +98,7 @@ class FleetManager:
         if token in self._registered_tokens:
             raise ConflictError("Payment token already registered.")
 
-        new_user_id = self._next_user_id
-        self._next_user_id += 1
+        new_user_id = max(self.users.keys(), default=0) + 1
         new_user = User(user_id=new_user_id, payment_token=token)
 
         self.users[new_user_id] = new_user
@@ -179,9 +173,7 @@ class FleetManager:
             raise ConflictError("No station with free slot available")
 
         # define end_time after start_time
-        end_time = datetime.datetime.now()
-        if end_time <= ride.start_time:
-            end_time = ride.start_time + datetime.timedelta(microseconds=1)
+        end_time= datetime.datetime.now()
 
         user = self.users.get(ride.user_id)
         if user is None:
@@ -327,28 +319,6 @@ class FleetManager:
     # -----------------------------
     # Helper Functions
     # -----------------------------
-    @property
-    def next_user_id(self) -> int:
-        return self._next_user_id
-
-    @property
-    def next_ride_id(self) -> int:
-        return self._next_ride_id
-
-    def configure_id_counters(self, next_user_id: int, next_ride_id: int) -> None:
-        if next_user_id <= max(self.users.keys(), default=0):
-            raise InvalidInputError("next_user_id must be greater than all existing user IDs")
-
-        max_known_ride_id = max(
-            list(self.active_rides.rides.keys()) + list(self.completed_rides.keys()),
-            default=0,
-        )
-        if next_ride_id <= max_known_ride_id:
-            raise InvalidInputError("next_ride_id must be greater than all existing ride IDs")
-
-        self._next_user_id = next_user_id
-        self._next_ride_id = next_ride_id
-
     def _distance(self, loc1:tuple[float, float], loc2:tuple[float, float]) -> float:
         """
         Calculate the distance between two locations.
@@ -373,9 +343,7 @@ class FleetManager:
         """
         Generates a new unique ride ID. In a real implementation, this could be more robust.
         """
-        ride_id = self._next_ride_id
-        self._next_ride_id += 1
-        return ride_id
+        return max(self.active_rides.rides.keys(), default=0) + 1
 
     def _nearest_station_with_free_slot(self,
                                         location:tuple[float, float],

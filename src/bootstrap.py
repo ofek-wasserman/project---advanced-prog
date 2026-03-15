@@ -1,15 +1,10 @@
 from pathlib import Path
 
 from src.data.loaders import StationDataLoader, VehicleDataLoader
-from src.data.state_serializer import load_state
 from src.services.fleet_manager import FleetManager
 
 
-def build_fleet_manager(
-    stations_csv: Path,
-    vehicles_csv: Path,
-    state_path: Path = Path("data/state.json"),
-) -> FleetManager:
+def build_fleet_manager(stations_csv: Path, vehicles_csv: Path) -> FleetManager:
     """
     Build and return a FleetManager instance using data loaded from CSV files:
     - Load stations and vehicles using the Data layer loaders
@@ -23,9 +18,7 @@ def build_fleet_manager(
     try:
         stations = StationDataLoader(stations_csv).create_objects()
         vehicles = VehicleDataLoader(vehicles_csv).create_objects()
-        fleet_manager = FleetManager(stations=stations, vehicles=vehicles)
-        load_state(fleet_manager, state_path)
-        return fleet_manager
+        return FleetManager(stations=stations, vehicles=vehicles)
 
     except Exception as e:
         raise RuntimeError(f"Bootstrap failed: {e}") from e
